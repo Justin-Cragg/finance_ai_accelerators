@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance AI Process Mapper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout idea: one full-screen canvas of swimlanes (roles as rows, flow left to right) with a slim toolbar on top and a details panel on the right that hides in presentation mode. Single light theme on purpose: it is screen-shared and projected. */
+:root {
+  --ink: #1d232b;
+  --muted: #5b6672;
+  --surface: #f6f7f4;
+  --panel: #ffffff;
+  --line: #d6dbd2;
+  --lane-a: #ffffff;
+  --lane-b: #eef1ea;
+  --accent: #4f7f12;
+  --accent-soft: #e6f0d6;
+  --pain: #c0392b;
+  --manual: #b26b00;
+  --control: #2a63a8;
+  --font-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--surface); color: var(--ink); font-family: var(--font-body); font-size: 14px; display: flex; flex-direction: column; overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 10px; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.icon { padding: 6px 8px; min-width: 34px; }
+input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: #fff; width: 100%; }
+textarea { resize: vertical; min-height: 54px; }
+label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+
+header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header .title { font-weight: 600; margin-right: 6px; white-space: nowrap; }
+header .group { display: flex; gap: 6px; align-items: center; }
+header .sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+#mapSelect { width: auto; max-width: 300px; }
+#initials { width: 56px; text-align: center; text-transform: uppercase; }
+#saveState { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.palette button { display: inline-flex; align-items: center; gap: 6px; }
+.palette svg { width: 18px; height: 18px; }
+
+main { flex: 1; display: flex; min-height: 0; }
+#canvasWrap { flex: 1; position: relative; overflow: hidden; background: var(--surface); }
+#canvas { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; }
+#crumbs { position: absolute; left: 12px; top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; z-index: 3; }
+#crumbs button { padding: 3px 8px; font-size: 13px; background: rgba(255,255,255,.95); }
+#crumbs .cur { font-weight: 600; padding: 3px 4px; }
+#crumbs .arrow { color: var(--muted); }
+.links-list { display: flex; flex-direction: column; gap: 6px; }
+.links-list button { text-align: left; }
+#hint { position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: var(--muted); background: rgba(255,255,255,.9); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; pointer-events: none; }
+#zoomCtl { position: absolute; right: 12px; bottom: 10px; display: flex; gap: 4px; }
+#legend { position: absolute; right: 12px; top: 10px; display: none; gap: 14px; background: rgba(255,255,255,.95); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+#legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+aside { width: 330px; background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0; font-weight: 600; }
+aside .card { display: flex; flex-direction: column; gap: 10px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.flag { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 13px; background: #fff; }
+.flag input { width: auto; margin: 0; }
+.flag.on.manual { border-color: var(--manual); background: #fbf0dd; }
+.flag.on.control { border-color: var(--control); background: #e3edf9; }
+.flag.on.pain { border-color: var(--pain); background: #fbe5e2; }
+.flag.on.idea { border-color: var(--accent); background: var(--accent-soft); }
+.comments { display: flex; flex-direction: column; gap: 8px; }
+.comment { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: #fafbf8; }
+.comment.resolved { opacity: .55; }
+.comment .meta { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+.comment .meta button { padding: 0 6px; font-size: 11px; }
+.comment p { margin: 4px 0 0; white-space: pre-wrap; }
+.empty { color: var(--muted); font-size: 13px; }
+.lanes-list { display: flex; flex-direction: column; gap: 6px; }
+.lane-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 4px; }
+.lane-row button { padding: 4px 7px; }
+.mono { font-family: var(--font-mono); font-size: 12px; }
+.muted { color: var(--muted); }
+.dNew[hidden], #dlgDraft .row2.dNew[hidden] { display: none; }
+.note { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+body.present header .edit-only, body.present aside, body.present #hint { display: none; }
+body.present #legend { display: flex; }
+
+#editBox { position: absolute; display: none; z-index: 5; }
+#editBox textarea { min-height: 0; height: 100%; font-size: 15px; text-align: center; border: 2px solid var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.12); resize: none; padding: 6px; }
+
+dialog { border: 1px solid var(--line); border-radius: 10px; padding: 18px; max-width: 640px; width: calc(100% - 32px); color: var(--ink); }
+dialog::backdrop { background: rgba(20,24,28,.35); }
+dialog h3 { margin: 0 0 12px; font-size: 17px; }
+dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+dialog .grid { display: grid; gap: 10px; }
+dialog pre { background: #f3f4f1; border: 1px solid var(--line); border-radius: 6px; padding: 10px; max-height: 50vh; overflow: auto; font-family: var(--font-mono); font-size: 12px; white-space: pre; }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; }
+kbd { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 6px; background: #fff; }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 13px; display: none; z-index: 20; }
+@media (max-width: 900px) { aside { width: 280px; } }
+@media (prefers-reduced-motion: no-preference) { button { transition: border-color .12s; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="title">Process Mapper</span>
+  <div class="group">
+    <select id="mapSelect" aria-label="Open map"></select>
+    <button id="btnNew" class="edit-only">New map</button>
+    <button id="btnDraft" class="edit-only" hidden title="Paste a description, procedure or transcript and Claude drafts the map">Draft with Claude</button>
+  </div>
+  <span class="sep edit-only"></span>
+  <div class="group palette edit-only" aria-label="Add to the map">
+    <button id="addStart" title="Start event"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="#4f7f12" stroke-width="2"/></svg>Start</button>
+    <button id="addTask" title="Step (Enter after a selected node)"><svg viewBox="0 0 18 18"><rect x="1.5" y="4" width="15" height="10" rx="2.5" fill="none" stroke="#1d232b" stroke-width="1.6"/></svg>Step</button>
+    <button id="addXor" title="Decision, either/or (X)"><svg viewBox="0 0 18 18"><path d="M9 1.5 16.5 9 9 16.5 1.5 9Z" fill="none" stroke="#1d232b" stroke-width="1.6"/><path d="M6.5 6.5l5 5m0-5-5 5" stroke="#1d232b" stroke-width="1.6"/></svg>Decision</button>
+    <button id="addAnd" title="All paths in parallel, AND (A)"><svg viewBox="0 0 18 18"><path d="M9 1.5 16.5 9 9 16.5 1.5 9Z" fill="none" stroke="#1d232b" stroke-width="1.6"/><path d="M9 5.5v7M5.5 9h7" stroke="#1d232b" stroke-width="1.6"/></svg>AND</button>
+    <button id="addOr" title="One or more paths, OR (O)"><svg viewBox="0 0 18 18"><path d="M9 1.5 16.5 9 9 16.5 1.5 9Z" fill="none" stroke="#1d232b" stroke-width="1.6"/><circle cx="9" cy="9" r="3" fill="none" stroke="#1d232b" stroke-width="1.6"/></svg>OR</button>
+    <button id="addLink" title="Link to another process (J)"><svg viewBox="0 0 18 18"><path d="M1.5 4h11l4 5-4 5h-11z" fill="none" stroke="#2a63a8" stroke-width="1.6" stroke-dasharray="2.5 1.5"/></svg>Link</button>
+    <button id="addEnd" title="End event (E)"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="none" stroke="#1d232b" stroke-width="3"/></svg>End</button>
+  </div>
+  <span class="sep edit-only"></span>
+  <div class="group">
+    <button id="btnUndo" class="icon edit-only" title="Undo (Ctrl+Z)" aria-label="Undo">↶</button>
+    <button id="btnRedo" class="icon edit-only" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">↷</button>
+    <button id="btnLayout" class="edit-only" title="Tidy the layout (L)">Tidy layout</button>
+    <button id="btnPresent" title="Presentation mode (P)">Present</button>
+    <button id="btnExport">Export</button>
+    <button id="btnImport" class="edit-only">Import</button>
+    <button id="btnHelp" class="icon" title="Shortcuts (?)" aria-label="Shortcuts">?</button>
+  </div>
+  <span class="sep edit-only"></span>
+  <div class="group edit-only">
+    <label for="initials" style="margin:0">Initials</label>
+    <input id="initials" maxlength="4" placeholder="AB">
+    <span id="saveState">Not saved yet</span>
+  </div>
+</header>
+
+<main>
+  <div id="canvasWrap">
+    <svg id="canvas" aria-label="Process map"></svg>
+    <div id="crumbs" aria-label="Where you are"></div>
+    <div id="editBox"><textarea id="editInput" aria-label="Step name"></textarea></div>
+    <div id="legend">
+      <span><i class="dot" style="background:#fbf0dd;border:2px solid var(--manual)"></i>Manual work</span>
+      <span><i class="dot" style="background:#e3edf9;border:2px solid var(--control)"></i>Control / approval</span>
+      <span><i class="dot" style="background:#fbe5e2;border:2px solid var(--pain)"></i>Pain point</span>
+      <span><i class="dot" style="background:var(--accent-soft);border:2px solid var(--accent)"></i>Automation idea</span>
+      <span>💬 open comments</span>
+    </div>
+    <div id="hint">Click a step, then <kbd>Enter</kbd> adds the next one · drag the ● handle to connect · double-click to rename · <kbd>?</kbd> for shortcuts</div>
+    <div id="zoomCtl">
+      <button class="icon" id="zoomOut" aria-label="Zoom out">−</button>
+      <button id="zoomFit">Fit</button>
+      <button class="icon" id="zoomIn" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+  <aside id="panel"></aside>
+</main>
+
+<dialog id="dlgNew">
+  <h3>New process map</h3>
+  <div class="grid">
+    <div class="row2">
+      <div><label for="nEng">Engagement (client code)</label><input id="nEng" placeholder="e.g. TRD-2026"></div>
+      <div><label for="nSession">Session</label><input id="nSession" placeholder="e.g. W2"></div>
+    </div>
+    <div class="row2">
+      <div><label for="nPid">Process ID (C2)</label><input id="nPid" placeholder="P-01"></div>
+      <div><label for="nModule">Module</label><select id="nModule"><option>EXP</option><option>BNK</option><option>CFF</option><option>GEN</option></select></div>
+    </div>
+    <div><label for="nName">Process name</label><input id="nName" placeholder="e.g. Employee expenses and corporate cards"></div>
+    <div><label for="nLanes">Swimlanes: one role per line, in order</label><textarea id="nLanes" rows="4">Employee
+Approver
+Finance
+System</textarea></div>
+    <p class="note">Use roles, not names. Don't type personal data (employee names, card numbers) into the map.</p>
+  </div>
+  <div class="actions"><button id="nCancel">Cancel</button><button id="nCreate" class="primary">Create map</button></div>
+</dialog>
+
+<dialog id="dlgDraft">
+  <h3 id="dTitle">Draft a map with Claude</h3>
+  <div class="grid">
+    <div class="row2">
+      <div><label for="dMode">What to do</label><select id="dMode"><option value="update">Update this map</option><option value="new">Draft a new process map</option><option value="sub">Draft a sub-process of the selected step</option></select></div>
+      <div class="dNew"><label for="dEng">Engagement</label><input id="dEng" placeholder="e.g. TRD-2026"></div>
+    </div>
+    <div class="row2 dNew">
+      <div><label for="dPid">Process ID</label><input id="dPid" placeholder="P-01"></div>
+      <div><label for="dName">Process name</label><input id="dName" placeholder="e.g. Purchase orders"></div>
+    </div>
+    <div class="dNew"><label for="dLanes">Roles to use as swimlanes (optional, one per line)</label><textarea id="dLanes" rows="2" placeholder="Leave blank to let Claude choose from the text"></textarea></div>
+    <div><label for="dText" id="dTextLabel">What to map from: paste a description, a procedure, notes or part of a transcript</label><textarea id="dText" rows="8"></textarea></div>
+    <p class="note" id="dUpdNote" hidden>Claude sees this map (steps, lanes, connectors, details and open comments) and returns the whole map with your changes. Steps it keeps keep their comments and sub-processes. Every change is listed in a comment on the start, and Ctrl+Z undoes the update.</p>
+    <p class="note">What you paste is sent to Claude on your account (approved tool under D3). Remove employee names, card numbers and other personal data first. The result is a draft: anything Claude inferred is added as a comment to confirm.</p>
+    <p id="dStatus" class="note" aria-live="polite"></p>
+  </div>
+  <div class="actions"><button id="dCancel">Cancel</button><button id="dStop" hidden>Stop</button><button id="dGo" class="primary">Draft the map</button></div>
+</dialog>
+
+<dialog id="dlgExport">
+  <h3>Export this map</h3>
+  <div class="grid">
+    <p class="note">The JSON file is what skill S2 reads to load the process into the C2 workbook. Mermaid and the image go into the report (Appendix B).</p>
+    <div class="row2">
+      <button id="exJson" class="primary">Download JSON: this map + sub-processes</button>
+      <button id="exAll">Download JSON: all maps in this engagement</button>
+      <button id="exJsonCopy">Copy JSON (this map + sub-processes)</button>
+      <button id="exSvg">Download image (SVG)</button>
+      <button id="exPng">Download image (PNG)</button>
+      <button id="exMermaid">Show Mermaid</button>
+      <button id="exSteps">Show step list</button>
+    </div>
+    <pre id="exOut" hidden></pre>
+    <button id="exCopyOut" hidden>Copy text above</button>
+  </div>
+  <div class="actions"><button id="exClose">Close</button></div>
+</dialog>
+
+<dialog id="dlgImport">
+  <h3>Import a map</h3>
+  <div class="grid">
+    <div><label for="imFile">Choose a JSON file exported from this tool</label><input id="imFile" type="file" accept=".json,application/json"></div>
+    <div><label for="imText">Or paste the JSON</label><textarea id="imText" rows="6"></textarea></div>
+  </div>
+  <div class="actions"><button id="imCancel">Cancel</button><button id="imGo" class="primary">Import</button></div>
+</dialog>
+
+<dialog id="dlgConfirm">
+  <h3 id="cfTitle">Are you sure?</h3>
+  <p id="cfText" class="note"></p>
+  <div class="actions"><button id="cfNo">Cancel</button><button id="cfYes" class="primary">Delete</button></div>
+</dialog>
+
+<dialog id="dlgHelp">
+  <h3>Shortcuts</h3>
+  <div class="keys">
+    <kbd>Enter</kbd><span>Add the next step after the selected one, same lane</span>
+    <kbd>Shift+Enter</kbd><span>Add the next step in the lane below</span>
+    <kbd>Ctrl+Enter</kbd><span>Add the next step in the lane above</span>
+    <kbd>X</kbd><span>Add a decision (either/or) after the selected node</span>
+    <kbd>A</kbd> <span>Add an AND split (all paths happen)</span>
+    <kbd>O</kbd><span>Add an OR split (one or more paths)</span>
+    <kbd>E</kbd><span>Add an end after the selected node</span>
+    <kbd>J</kbd><span>Add a link to another process after the selected node</span>
+    <kbd>S</kbd><span>Open the selected step's sub-process, or create one</span>
+    <kbd>U</kbd><span>Go up to the parent process, or back after following a link</span>
+    <kbd>Draft with Claude</kbd><span>Paste a description, procedure or transcript and Claude drafts the map (hosted version only)</span>
+    <kbd>F2</kbd><span>Rename the selected node (or double-click it)</span>
+    <kbd>M</kbd> <kbd>K</kbd> <kbd>!</kbd><span>Toggle manual work, control, pain point</span>
+    <kbd>C</kbd><span>Write a comment on the selected node</span>
+    <kbd>Delete</kbd><span>Delete the selected node or connector</span>
+    <kbd>Ctrl+Z</kbd><span>Undo (Ctrl+Shift+Z to redo)</span>
+    <kbd>L</kbd><span>Tidy the layout</span>
+    <kbd>P</kbd><span>Presentation mode on or off</span>
+    <kbd>Arrows</kbd><span>Move the selection along the flow</span>
+  </div>
+  <p class="note">Connect two nodes by dragging from the ● handle on the right of a node onto another node. Click a connector to label it (e.g. "Yes", "Over $500"). Drag the background to pan; scroll to zoom. Click the ⊞ marker on a step to open its sub-process, and the ↗ marker on a link to open the linked process.</p>
+  <div class="actions"><button id="hClose" class="primary">Close</button></div>
+</dialog>
+
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+// ---------- constants ----------
+const LANE_HEADER = 150, LANE_BASE = 140, SLOT = 84, COL = 210, X0 = 200;
+const SIZE = { task: [170, 62], start: [44, 44], end: [44, 44], xor: [58, 58], and: [58, 58], or: [58, 58], link: [170, 56] };
+const TYPE_NAME = { task: 'Step', start: 'Start', end: 'End', xor: 'Decision (either/or)', and: 'AND split / join', or: 'OR split / join', link: 'Link to another process' };
+const SCHEMA = 'finance-ai-process-map/2', BUNDLE = 'finance-ai-process-map-bundle/2';
+const blankNode = o => Object.assign({ id: '', type: 'task', label: '', description: '', lane: '', slot: 0, x: 0, system: '', minutes: '', flags: {}, pain: '', idea: '', notes: '', comments: [], subprocess: null, link: null }, o);
+const $ = id => document.getElementById(id);
+const svg = $('canvas');
+const NS = 'http://www.w3.org/2000/svg';
+
+// ---------- storage: artifact db if present, else localStorage ----------
+const store = {
+  db: null, mode: 'local',
+  async init() {
+    try {
+      if (window.claude && typeof window.claude.use === 'function') {
+        const db = await Promise.race([window.claude.use('db'), new Promise(r => setTimeout(() => r(null), 10000))]);
+        if (db) { this.db = db; this.mode = 'db'; }
+      }
+    } catch (e) { this.db = null; }
+  },
+  localAll() { try { return JSON.parse(localStorage.getItem('fai-mapper-maps') || '{}'); } catch (e) { return {}; } },
+  localPut(all) { try { localStorage.setItem('fai-mapper-maps', JSON.stringify(all)); return true; } catch (e) { return false; } },
+  async list() {
+    if (this.db) {
+      try { const s = await this.db.collection('maps').get(); return s.docs.map(d => d.data()); }
+      catch (e) { this.db = null; this.mode = 'local'; }
+    }
+    return Object.values(this.localAll());
+  },
+  async save(m) {
+    if (this.db) {
+      try { await this.db.collection('maps').doc(m.id).set(JSON.parse(JSON.stringify(m))); return true; }
+      catch (e) { if (e && e.code === 'quota_exceeded') toast('The page store is full. Export this map as JSON to keep it.'); }
+    }
+    const all = this.localAll(); all[m.id] = m; return this.localPut(all);
+  },
+  async remove(id) {
+    if (this.db) { try { await this.db.collection('maps').doc(id).delete(); } catch (e) {} }
+    const all = this.localAll(); delete all[id]; this.localPut(all);
+  }
+};
+let downloads = null;
+async function initDownloads() {
+  try { if (window.claude && window.claude.use) downloads = await window.claude.use('downloads'); } catch (e) { downloads = null; }
+}
+async function saveFile(filename, data, mime) {
+  if (downloads) {
+    try { await downloads.save({ filename, data }); toast('Saved ' + filename); return; }
+    catch (e) { toast('The download was not saved.'); return; }
+  }
+  try {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch (e) { toast('Downloads are blocked here. Use Copy JSON instead.'); }
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); toast('Copied'); }
+  catch (e) { const out = $('exOut'); out.hidden = false; out.textContent = t; toast('Copy blocked: select the text and copy it manually.'); }
+}
+
+// ---------- state ----------
+let map = null, maps = [], sel = null, view = { x: 0, y: 0, k: 1 }, navStack = [];
+let undoStack = [], redoStack = [], saveTimer = null, connecting = null, dragging = null, panning = null;
+const uid = p => p + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+function initials() { return ($('initials').value || '').trim().toUpperCase() || '—'; }
+
+function blankMap(o) {
+  return { schema: SCHEMA, id: uid('map-'), engagement: o.engagement || '', session: o.session || '', process_id: o.process_id || '', module: o.module || 'GEN',
+    process_name: o.process_name || 'Untitled process', example: !!o.example, parent: o.parent || null, created: now(), updated: now(),
+    lanes: (o.lanes || ['Process owner']).map(n => ({ id: uid('l-'), name: n })), nodes: [], edges: [] };
+}
+function exampleMap() {
+  const m = blankMap({ engagement: 'EXAMPLE', session: 'W0', process_id: 'P-01', module: 'EXP', example: true,
+    process_name: 'Example: card expense to posted journal', lanes: ['Employee', 'Approver', 'Finance (AP lead)', 'Expense tool / ERP'] });
+  const L = m.lanes.map(l => l.id);
+  const n = (id, type, label, lane, col, extra) => m.nodes.push(blankNode(Object.assign({ id, type, label, lane: L[lane], x: X0 + col * COL }, extra || {})));
+  n('n1', 'start', 'Card purchase', 0, 0);
+  n('n2', 'task', 'Photograph receipt in app', 0, 1, { system: 'Expensify', minutes: 2, flags: { manual: true } });
+  n('n3', 'task', 'Card line arrives from feed', 3, 1, { system: 'Card feed', notes: 'Feed breaks about once a month (AP lead).' });
+  n('n4', 'and', 'Both received', 3, 2);
+  n('n5', 'task', 'Code category and project', 0, 3, { system: 'Expensify', minutes: 3, flags: { manual: true, pain: true }, pain: 'Most lines recoded by finance at month end', comments: [{ id: 'c1', by: 'EX', at: now(), text: 'Ask for the recode rate from the last 3 months (EXP-08).', resolved: false }] });
+  n('n6', 'xor', 'Over $500?', 1, 4);
+  n('n7', 'task', 'Manager approves', 1, 5, { flags: { control: true }, minutes: 1 });
+  n('n8', 'task', 'FC approves', 1, 5, { slot: 1, flags: { control: true }, minutes: 2 });
+  n('n9', 'task', 'Recode lines and export to ERP', 2, 6, { system: 'Expensify → NetSuite', minutes: 4, flags: { manual: true, pain: true, idea: true }, pain: 'About 10 h / month recoding', idea: 'Coding rules + AI suggestion (L-EXP-02, L-EXP-03)' });
+  n('n10', 'link', 'Card statement reconciliation', 3, 7, { description: 'Monthly card statement reconciliation is mapped as its own process.' });
+  const e = (f, t, label) => m.edges.push({ id: uid('e-'), from: f, to: t, label: label || '' });
+  e('n1', 'n2'); e('n1', 'n3'); e('n2', 'n4'); e('n3', 'n4'); e('n4', 'n5'); e('n5', 'n6');
+  e('n6', 'n7', 'No'); e('n6', 'n8', 'Yes'); e('n7', 'n9'); e('n8', 'n9'); e('n9', 'n10');
+  m.nodes.find(x => x.id === 'n5').description = 'Employee picks the expense category and project code for each card line in the app.';
+  return m;
+}
+
+// ---------- map tree helpers ----------
+const byId = id => maps.find(m => m.id === id) || (map && map.id === id ? map : null);
+function rootOf(m) { let r = m, guard = 0; while (r && r.parent && byId(r.parent.map_id) && guard++ < 20) r = byId(r.parent.map_id); return r; }
+function descendants(m) { const out = []; const walk = x => (x.nodes || []).forEach(n => { const c = n.subprocess && byId(n.subprocess); if (c && !out.includes(c)) { out.push(c); walk(c); } }); walk(m); return out; }
+function chain(m) { const c = [m]; let guard = 0; while (c[0].parent && byId(c[0].parent.map_id) && guard++ < 20) c.unshift(byId(c[0].parent.map_id)); return c; }
+function mapLabel(m) { return m ? ((m.process_id ? m.process_id + ' ' : '') + m.process_name) : '(missing map)'; }
+function linkedFrom(m) { const out = []; maps.forEach(x => (x.nodes || []).forEach(n => { if (n.type === 'link' && n.link && n.link.map_id === m.id) out.push({ map: x, node: n }); })); return out; }
+
+// ---------- geometry ----------
+function laneIndex(id) { return map.lanes.findIndex(l => l.id === id); }
+function laneSlots(i) { const id = map.lanes[i].id; return Math.max(0, ...map.nodes.filter(n => n.lane === id).map(n => n.slot || 0)); }
+function laneHeight(i) { return LANE_BASE + laneSlots(i) * SLOT; }
+function laneTop(i) { let y = 0; for (let k = 0; k < i; k++) y += laneHeight(k); return y; }
+function totalHeight() { return laneTop(map.lanes.length); }
+function nodeBox(n) {
+  const [w, h] = SIZE[n.type]; const i = Math.max(0, laneIndex(n.lane));
+  const cy = laneTop(i) + LANE_BASE / 2 + (n.slot || 0) * SLOT;
+  return { x: n.x, y: cy - h / 2, w, h, cx: n.x + w / 2, cy };
+}
+function contentWidth() { return Math.max(900, ...map.nodes.map(n => n.x + SIZE[n.type][0] + 200)); }
+
+// ---------- rendering ----------
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function wrap(text, max) {
+  const words = String(text || '').split(/\s+/).filter(Boolean); const lines = []; let cur = '';
+  for (const w of words) { if ((cur + ' ' + w).trim().length > max && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }
+  if (cur) lines.push(cur);
+  if (lines.length > 3) { lines.length = 3; lines[2] = lines[2].replace(/.{0,2}$/, '…'); }
+  return lines.length ? lines : [''];
+}
+function edgePath(a, b) {
+  const A = nodeBox(a), B = nodeBox(b);
+  const sx = A.x + A.w, sy = A.cy, tx = B.x, ty = B.cy;
+  if (tx >= sx + 20) {
+    // a straight run along one row that would pass through other nodes detours below them
+    if (Math.abs(sy - ty) < 2) {
+      const blockers = map.nodes.filter(n => n.id !== a.id && n.id !== b.id).map(nodeBox).filter(q => q.x < tx && q.x + q.w > sx && q.y < sy + 4 && q.y + q.h > sy - 4);
+      if (blockers.length) {
+        const below = a.type === 'task' || a.type === 'link' ? 0 : (a.system ? 48 : 34);
+        const dy = Math.max(Math.max(...blockers.map(q => q.y + q.h)) + 22, A.y + A.h + below + 10); const x1 = sx + 14, x2 = tx - 16;
+        return { d: `M${sx} ${sy} H${x1} V${dy} H${x2} V${ty} H${tx - 2}`, lx: (x1 + x2) / 2 - 10, ly: dy - 5 };
+      }
+    }
+    const mx = sx + Math.max(18, Math.min(60, (tx - sx) / 2)); return { d: `M${sx} ${sy} H${mx} V${ty} H${tx - 2}`, lx: mx + 6, ly: (sy === ty ? sy - 8 : (sy + ty) / 2) };
+  }
+  // back edge or same column: loop below both nodes
+  const by = Math.max(A.y + A.h, B.y + B.h) + 26;
+  return { d: `M${A.cx} ${A.y + A.h} V${by} H${B.cx} V${B.y + B.h + 2}`, lx: (A.cx + B.cx) / 2, ly: by - 6, back: true };
+}
+function render() {
+  svg.innerHTML = '';
+  const defs = el('defs', {}, svg);
+  const mk = el('marker', { id: 'arr', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 0L10 5L0 10z', fill: '#5b6672' }, mk);
+  const mk2 = el('marker', { id: 'arrSel', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, defs);
+  el('path', { d: 'M0 0L10 5L0 10z', fill: '#4f7f12' }, mk2);
+  const g = el('g', { id: 'world', transform: `translate(${view.x} ${view.y}) scale(${view.k})` }, svg);
+  const W = contentWidth();
+  // title
+  const t = el('text', { x: 0, y: -18, 'font-size': 16, 'font-weight': 600, fill: '#1d232b' }, g);
+  t.textContent = `${map.process_id ? map.process_id + ' · ' : ''}${map.process_name}${map.session ? ' · ' + map.session : ''}`;
+  // lanes
+  map.lanes.forEach((l, i) => {
+    const y = laneTop(i), h = laneHeight(i);
+    el('rect', { x: 0, y, width: W, height: h, fill: i % 2 ? '#eef1ea' : '#ffffff', stroke: '#d6dbd2' }, g);
+    el('rect', { x: 0, y, width: LANE_HEADER, height: h, fill: i % 2 ? '#e3e8dd' : '#f3f5f0', stroke: '#d6dbd2' }, g);
+    wrap(l.name, 18).forEach((ln, k, arr) => {
+      const tx = el('text', { x: 14, y: y + h / 2 - (arr.length - 1) * 9 + k * 18 + 5, 'font-size': 14, 'font-weight': 600, fill: '#1d232b' }, g); tx.textContent = ln;
+    });
+  });
+  // edges
+  map.edges.forEach(e => {
+    const a = map.nodes.find(n => n.id === e.from), b = map.nodes.find(n => n.id === e.to); if (!a || !b) return;
+    const p = edgePath(a, b); const on = sel && sel.kind === 'edge' && sel.id === e.id;
+    const grp = el('g', { 'data-edge': e.id, style: 'cursor:pointer' }, g);
+    el('path', { d: p.d, fill: 'none', stroke: 'transparent', 'stroke-width': 14 }, grp);
+    el('path', { d: p.d, fill: 'none', stroke: on ? '#4f7f12' : '#5b6672', 'stroke-width': on ? 2.4 : 1.5, 'marker-end': on ? 'url(#arrSel)' : 'url(#arr)', 'stroke-dasharray': p.back ? '6 4' : '' }, grp);
+    if (e.label) {
+      const tw = e.label.length * 7 + 10;
+      el('rect', { x: p.lx - 2, y: p.ly - 13, width: tw, height: 18, rx: 4, fill: '#fff', stroke: '#d6dbd2' }, grp);
+      const tx = el('text', { x: p.lx + 3, y: p.ly, 'font-size': 12, fill: '#1d232b' }, grp); tx.textContent = e.label;
+    }
+  });
+  // nodes
+  map.nodes.forEach(n => {
+    const b = nodeBox(n); const on = sel && sel.kind === 'node' && sel.id === n.id;
+    const grp = el('g', { 'data-node': n.id, style: 'cursor:grab' }, g);
+    if (n.description) { const tt = el('title', {}, grp); tt.textContent = n.description; }
+    const f = n.flags || {};
+    const sysText = s => s.length > 24 ? s.slice(0, 23) + '…' : s;
+    let fill = '#ffffff', stroke = '#1d232b';
+    if (f.manual) { fill = '#fbf0dd'; stroke = '#b26b00'; }
+    if (f.control) { fill = '#e3edf9'; stroke = '#2a63a8'; }
+    if (f.pain) { stroke = '#c0392b'; }
+    if (n.type === 'task') {
+      el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 9, fill, stroke, 'stroke-width': f.pain ? 2.6 : 1.4 }, grp);
+      const lines = wrap(n.label, 22);
+      const sysLine = n.system ? 1 : 0; const total = lines.length + sysLine;
+      lines.forEach((ln, k) => { const tx = el('text', { x: b.cx, y: b.cy - (total - 1) * 8 + k * 16 + 5, 'text-anchor': 'middle', 'font-size': 13.5, fill: '#1d232b' }, grp); tx.textContent = ln; });
+      if (n.system) { const tx = el('text', { x: b.cx, y: b.cy - (total - 1) * 8 + lines.length * 16 + 5, 'text-anchor': 'middle', 'font-size': 11, fill: '#5b6672', 'font-family': 'IBM Plex Mono, monospace' }, grp); tx.textContent = sysText(n.system); }
+      if (f.idea) el('rect', { x: b.x + 4, y: b.y + b.h - 6, width: b.w - 8, height: 3, rx: 1.5, fill: '#4f7f12' }, grp);
+      if (n.subprocess) {
+        const child = byId(n.subprocess);
+        const og = el('g', { 'data-open': n.subprocess, style: 'cursor:pointer' }, grp);
+        el('rect', { x: b.cx - 9, y: b.y + b.h - 9, width: 18, height: 18, rx: 3, fill: '#fff', stroke: '#1d232b', 'stroke-width': 1.4 }, og);
+        el('path', { d: `M${b.cx - 5} ${b.y + b.h} H${b.cx + 5} M${b.cx} ${b.y + b.h - 5} V${b.y + b.h + 5}`, stroke: '#1d232b', 'stroke-width': 1.6 }, og);
+        const tt = el('title', {}, og); tt.textContent = 'Open sub-process' + (child ? ': ' + child.nodes.filter(x => x.type === 'task').length + ' steps' : '');
+      }
+    } else if (n.type === 'link') {
+      const target = n.link && byId(n.link.map_id);
+      el('path', { d: `M${b.x} ${b.y} H${b.x + b.w - 20} L${b.x + b.w} ${b.cy} L${b.x + b.w - 20} ${b.y + b.h} H${b.x} Z`, fill: '#eef3fb', stroke: f.pain ? '#c0392b' : '#2a63a8', 'stroke-width': f.pain ? 2.6 : 1.5, 'stroke-dasharray': '6 3' }, grp);
+      const t0 = el('text', { x: b.x + 10, y: b.y + 15, 'font-size': 10, 'letter-spacing': '.06em', fill: '#2a63a8' }, grp); t0.textContent = 'LINKED PROCESS';
+      const name = n.label || (target ? mapLabel(target) : 'Choose a process');
+      wrap(name, 20).slice(0, 2).forEach((ln, k) => { const tx = el('text', { x: b.x + 10, y: b.y + 32 + k * 15, 'font-size': 13, fill: '#1d232b' }, grp); tx.textContent = ln; });
+      if (target) { const og = el('g', { 'data-open': target.id, style: 'cursor:pointer' }, grp); el('circle', { cx: b.x + b.w - 30, cy: b.y + 12, r: 9, fill: '#2a63a8' }, og); const tx = el('text', { x: b.x + b.w - 30, y: b.y + 16, 'text-anchor': 'middle', 'font-size': 12, fill: '#fff' }, og); tx.textContent = '↗'; const tt = el('title', {}, og); tt.textContent = 'Open ' + mapLabel(target); }
+      if (n.system) { const tx = el('text', { x: b.cx, y: b.y + b.h + 14, 'text-anchor': 'middle', 'font-size': 11, fill: '#5b6672', 'font-family': 'IBM Plex Mono, monospace' }, grp); tx.textContent = sysText(n.system); }
+    } else if (n.type === 'start' || n.type === 'end') {
+      el('circle', { cx: b.cx, cy: b.cy, r: b.w / 2, fill: '#fff', stroke: n.type === 'start' ? '#4f7f12' : '#1d232b', 'stroke-width': n.type === 'start' ? 2.2 : 4 }, grp);
+      const ls = wrap(n.label, 16);
+      ls.forEach((ln, k) => { const tx = el('text', { x: b.cx, y: b.y + b.h + 16 + k * 15, 'text-anchor': 'middle', 'font-size': 12.5, fill: '#1d232b' }, grp); tx.textContent = ln; });
+      if (n.system) { const tx = el('text', { x: b.cx, y: b.y + b.h + 16 + ls.length * 15, 'text-anchor': 'middle', 'font-size': 11, fill: '#5b6672', 'font-family': 'IBM Plex Mono, monospace' }, grp); tx.textContent = sysText(n.system); }
+    } else {
+      const { cx, cy, w } = b; const r = w / 2;
+      el('path', { d: `M${cx} ${cy - r} L${cx + r} ${cy} L${cx} ${cy + r} L${cx - r} ${cy} Z`, fill: f.control ? '#e3edf9' : '#fffbe8', stroke: f.pain ? '#c0392b' : '#1d232b', 'stroke-width': f.pain ? 2.6 : 1.5 }, grp);
+      if (n.type === 'xor') el('path', { d: `M${cx - 9} ${cy - 9} L${cx + 9} ${cy + 9} M${cx + 9} ${cy - 9} L${cx - 9} ${cy + 9}`, stroke: '#1d232b', 'stroke-width': 2.4 }, grp);
+      if (n.type === 'and') el('path', { d: `M${cx} ${cy - 12} V${cy + 12} M${cx - 12} ${cy} H${cx + 12}`, stroke: '#1d232b', 'stroke-width': 2.6 }, grp);
+      if (n.type === 'or') el('circle', { cx, cy, r: 10, fill: 'none', stroke: '#1d232b', 'stroke-width': 2.4 }, grp);
+      const tag = { xor: 'EITHER / OR', and: 'ALL OF (AND)', or: 'ONE OR MORE (OR)' }[n.type];
+      const t1 = el('text', { x: cx, y: cy - r - 8, 'text-anchor': 'middle', 'font-size': 10, 'letter-spacing': '.06em', fill: '#5b6672' }, grp); t1.textContent = tag;
+      const ls = wrap(n.label, 20);
+      ls.forEach((ln, k) => { const tx = el('text', { x: cx, y: cy + r + 16 + k * 15, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 500, fill: '#1d232b' }, grp); tx.textContent = ln; });
+      if (n.system) { const tx = el('text', { x: cx, y: cy + r + 16 + ls.length * 15, 'text-anchor': 'middle', 'font-size': 11, fill: '#5b6672', 'font-family': 'IBM Plex Mono, monospace' }, grp); tx.textContent = sysText(n.system); }
+    }
+    // badges
+    const open = (n.comments || []).filter(c => !c.resolved).length;
+    let bx = b.x + b.w - 4;
+    if (open) { const bg = el('g', {}, grp); el('rect', { x: bx - 30, y: b.y - 10, width: 30, height: 18, rx: 9, fill: '#1d232b' }, bg); const tx = el('text', { x: bx - 15, y: b.y + 3, 'text-anchor': 'middle', 'font-size': 11, fill: '#fff' }, bg); tx.textContent = '💬' + open; bx -= 34; }
+    if (f.pain) { el('circle', { cx: bx - 9, cy: b.y - 1, r: 9, fill: '#c0392b' }, grp); const tx = el('text', { x: bx - 9, y: b.y + 3.5, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#fff' }, grp); tx.textContent = '!'; bx -= 22; }
+    if (n.minutes !== '' && n.minutes != null && n.type === 'task') { const tx = el('text', { x: b.x + 6, y: b.y - 4, 'font-size': 11, fill: '#5b6672' }, grp); tx.textContent = n.minutes + ' min'; }
+    if (on) el('rect', { x: b.x - 6, y: b.y - 6, width: b.w + 12, height: b.h + 12, rx: 12, fill: 'none', stroke: '#4f7f12', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, grp);
+    if (!document.body.classList.contains('present') && n.type !== 'end') {
+      el('circle', { cx: b.x + b.w + 9, cy: b.cy, r: 7, fill: on ? '#4f7f12' : '#9aa59a', stroke: '#fff', 'stroke-width': 2, 'data-handle': n.id, style: 'cursor:crosshair' }, grp);
+    }
+  });
+  renderCrumbs();
+  if (connecting) el('path', { d: `M${connecting.x1} ${connecting.y1} L${connecting.x2} ${connecting.y2}`, stroke: '#4f7f12', 'stroke-width': 2, 'stroke-dasharray': '5 4', fill: 'none', 'marker-end': 'url(#arrSel)' }, g);
+  renderPanel();
+}
+
+// ---------- drafting from an outline ----------
+const OUTLINE_SPEC = `Reply with ONLY a JSON object in this format (no other text):
+{"processes":[{"process_id":"P-01","process_name":"Purchase orders","lanes":["Requester","Purchasing","NetSuite"],
+ "steps":[
+  {"id":"s1","type":"start","label":"Need identified","lane":"Requester","next":["s2"]},
+  {"id":"s2","type":"task","label":"Raise requisition","lane":"Requester","system":"NetSuite","description":"Requester creates a requisition with item, quantity and cost centre.","flags":["manual"],"source":"para 2","next":["s3"]},
+  {"id":"s3","type":"xor","label":"Over $5k?","lane":"Purchasing","next":[{"to":"s4","label":"Yes"},{"to":"s5","label":"No"}]},
+  {"id":"s4","type":"task","label":"FC approves","lane":"Purchasing","flags":["control"],"confirm":"Approval limit not stated in the text","next":["s5"]},
+  {"id":"s5","type":"task","label":"Issue PO","lane":"Purchasing","subprocess":{"lanes":["Purchasing"],"steps":[{"id":"a1","type":"start","label":"Start","lane":"Purchasing","next":["a2"]},{"id":"a2","type":"task","label":"Email PO","lane":"Purchasing","next":["a3"]},{"id":"a3","type":"end","label":"Sent","lane":"Purchasing"}]},"next":["s6"]},
+  {"id":"s6","type":"link","lane":"Purchasing","link_to":"Goods receipt"}]}]}
+Types: start, task, xor (either/or decision), and (all paths happen), or (one or more paths), link (continues in another named process), end.
+Optional step fields: system (any type), minutes (tasks), description, flags (manual, control, pain, idea), pain, idea, notes, source, confirm, subprocess (tasks only, same format), link_to (link only).
+Rules: use only what the text says; put anything inferred or uncertain in "confirm"; never invent volumes, minutes or limits; one start; every step except end and link has "next"; a "next" pointing back to an earlier step is a rework loop; decisions are their own xor/and/or nodes with labelled branches; use a subprocess when the text describes several steps inside one step; lanes are roles (and key systems if useful), never people's names; no personal data.`;
+function outlineToMaps(o, ctx) {
+  const t0 = now(); const made = []; const notes = [];
+  const build = (p, parent, path) => {
+    const steps = Array.isArray(p.steps) ? p.steps : [];
+    const laneNames = [...new Set([...(p.lanes || []), ...steps.map(s => s.lane).filter(Boolean)])];
+    if (!laneNames.length) laneNames.push('Process owner');
+    const m = blankMap({ engagement: ctx.engagement, session: ctx.session || '', module: p.module || ctx.module || 'GEN', process_id: p.process_id || '', process_name: p.process_name || 'Untitled process', lanes: laneNames, parent });
+    m.generated = { by: 'Claude', at: t0, from: 'Draft with Claude' };
+    const laneId = Object.fromEntries(m.lanes.map(l => [l.name, l.id]));
+    const ids = {}; const kids = [];
+    (steps.length ? steps : [{ id: 'start', type: 'start', label: 'Start', lane: laneNames[0] }]).forEach((st, k) => {
+      const nid = 'n' + (k + 1); ids[String(st.id || ('s' + (k + 1)))] = nid;
+      const type = SIZE[st.type] ? st.type : 'task';
+      const flags = {}; (Array.isArray(st.flags) ? st.flags : []).forEach(f => { if (['manual', 'control', 'pain', 'idea'].includes(f)) flags[f] = true; });
+      const comments = st.confirm ? [{ id: uid('c-'), by: 'AI', at: t0, text: 'To confirm: ' + st.confirm, resolved: false }] : [];
+      const n = blankNode({ id: nid, type, label: String(st.label || (type === 'link' ? '' : type)), description: String(st.description || ''), lane: laneId[st.lane] || m.lanes[0].id,
+        system: String(st.system || ''), minutes: type === 'task' && st.minutes !== undefined && st.minutes !== '' ? Number(st.minutes) || '' : '', flags, pain: String(st.pain || (flags.pain ? (st.description || st.label || '') : '')),
+        idea: String(st.idea || ''), notes: [st.notes, st.source ? 'Source: ' + st.source : ''].filter(Boolean).join('\n'), comments });
+      n._link_to = st.link_to; m.nodes.push(n);
+      if (st.subprocess && type === 'task') kids.push([n, st.subprocess]);
+    });
+    (steps).forEach((st, k) => (Array.isArray(st.next) ? st.next : []).forEach(nx => {
+      const to = typeof nx === 'string' ? nx : String(nx && nx.to); const label = typeof nx === 'object' && nx ? String(nx.label || '') : '';
+      if (ids[to]) m.edges.push({ id: uid('e-'), from: 'n' + (k + 1), to: ids[to], label }); else notes.push(`"${st.label || st.id}" points to a missing step`);
+    }));
+    const st0 = m.nodes.find(n => n.type === 'start'); if (st0) st0.comments.unshift({ id: uid('c-'), by: 'AI', at: t0, resolved: false, text: 'Draft generated by Claude from pasted text. Review every step, owner, system and branch with the client.' });
+    layoutMap(m); made.push(m);
+    kids.forEach(([n, sub]) => { const c = build(Object.assign({ process_id: (m.process_id || 'P') + '.' + n.id.slice(1), process_name: n.label, lanes: sub.lanes && sub.lanes.length ? sub.lanes : laneNames }, sub), { map_id: m.id, node_id: n.id }, path + ' › ' + n.label); n.subprocess = c.id; });
+    return m;
+  };
+  (o.processes || []).forEach(p => build(p, ctx.parent || null, p.process_name || ''));
+  const pool = [...made, ...maps];
+  made.forEach(m => m.nodes.forEach(n => {
+    const ref = n._link_to; delete n._link_to; if (n.type !== 'link') return;
+    const tgt = pool.find(x => !x.parent && ref && (x.process_id === ref || (x.process_name || '').toLowerCase() === String(ref).toLowerCase()));
+    if (tgt) { n.link = { map_id: tgt.id }; n.label = n.label || mapLabel(tgt); } else { n.label = n.label || String(ref || 'Linked process'); if (ref) notes.push(`Link to "${ref}" not found: choose the map on the link node`); }
+  }));
+  return { made, notes };
+}
+const FIELDS_U = ['description', 'system', 'minutes', 'pain', 'idea', 'notes'];
+function mapToOutline(m) {
+  const lane = Object.fromEntries(m.lanes.map(l => [l.id, l.name]));
+  const steps = m.nodes.map(n => {
+    const s = { id: n.id, type: n.type, label: n.label || '', lane: lane[n.lane] || '' };
+    const nx = m.edges.filter(e => e.from === n.id).map(e => e.label ? { to: e.to, label: e.label } : e.to); if (nx.length) s.next = nx;
+    FIELDS_U.forEach(f => { if (n[f] !== undefined && n[f] !== null && n[f] !== '') s[f] = n[f]; });
+    const fl = Object.keys(n.flags || {}).filter(k => n.flags[k]); if (fl.length) s.flags = fl;
+    const oc = (n.comments || []).filter(c => !c.resolved).map(c => ({ id: c.id, text: c.text })); if (oc.length) s.open_comments = oc;
+    if (n.subprocess) s.keep_subprocess = true;
+    if (n.type === 'link' && n.link) { const t = byId(n.link.map_id); s.link_to = t ? (t.process_id || t.process_name) : n.label; }
+    return s;
+  });
+  return { processes: [{ process_id: m.process_id, process_name: m.process_name, lanes: m.lanes.map(l => l.name), steps }] };
+}
+const UPDATE_SPEC = `Return ONLY a JSON object (no other text) with the COMPLETE updated process, in the same format as the current map, plus "changes" and "resolve":
+{"processes":[{"process_id":"...","process_name":"...","lanes":[...],"steps":[...every step...]}],
+ "changes":["Added decision 'Matches PO?' after 'Record invoice'","Removed 'Acknowledge PO'"],
+ "resolve":[{"comment_id":"c-abc123","answer":"By email to the AP inbox"}]}
+Rules:
+- Return every step, changed or not. Keep the "id" of every step you keep, even if you edit it. Give each new step a new id starting with "new" (new1, new2...). Leave out a step only to remove it.
+- Change only what the instruction or text supports. Leave every other step, field, lane and connector exactly as it is.
+- To clear a field set it to "". Do not return "open_comments" (they are kept automatically); keep "keep_subprocess": true where present.
+- New steps may use the same fields as drafting: type (start, task, xor, and, or, link, end), label, lane, next (ids, or {"to":id,"label":"Yes"}), description, system, minutes, flags (manual, control, pain, idea), pain, idea, notes, source, confirm, subprocess (tasks only), link_to (link only).
+- Put anything inferred or uncertain in "confirm" on the step it affects. Never invent volumes, minutes or limits. Decisions are their own xor/and/or steps with labelled branches. Lanes are roles, never people's names.
+- "changes": one short sentence per change. "resolve": only where the text clearly answers an open comment; give the comment id and the answer.`;
+function mergeUpdate(m, rev) {
+  const p = rev.processes[0]; const steps = Array.isArray(p.steps) ? p.steps : []; const t0 = now(); const notes = [];
+  if (!steps.length) throw { code: 'invalid_json' };
+  const old = Object.fromEntries(m.nodes.map(n => [n.id, n]));
+  const laneByName = Object.fromEntries(m.lanes.map(l => [l.name, l]));
+  const names = [...new Set([...(p.lanes || []), ...steps.map(s => s.lane).filter(Boolean)])];
+  const lanes = names.length ? names.map(nm => laneByName[nm] || { id: uid('l-'), name: nm }) : m.lanes.slice(0, 1);
+  const laneId = Object.fromEntries(lanes.map(l => [l.name, l.id]));
+  const ids = {}, nodes = [], kids = [], used = new Set(Object.keys(old)); let k = 1;
+  steps.forEach(st => {
+    const sid = String(st.id || ''); const type = SIZE[st.type] ? st.type : 'task'; let n;
+    if (old[sid] && !Object.values(ids).includes(sid)) { n = old[sid]; ids[sid] = sid; }
+    else { while (used.has('n' + k)) k++; const nid = 'n' + k; used.add(nid); ids[sid] = nid; n = blankNode({ id: nid, type, label: '' }); }
+    n.type = type; if (st.label) n.label = String(st.label);
+    n.lane = laneId[st.lane] || (lanes.some(l => l.id === n.lane) ? n.lane : lanes[0].id);
+    FIELDS_U.forEach(f => { if (f in st) n[f] = st[f] === null || st[f] === undefined ? '' : (f === 'minutes' ? (st[f] === '' ? '' : Number(st[f]) || '') : String(st[f])); });
+    if (type !== 'task') n.minutes = '';
+    if (Array.isArray(st.flags)) { n.flags = {}; st.flags.forEach(f => { if (['manual', 'control', 'pain', 'idea'].includes(f)) n.flags[f] = true; }); }
+    if (st.source) { const src = 'Source: ' + st.source; if (!(n.notes || '').includes(src)) n.notes = ((n.notes || '') + '\n' + src).trim(); }
+    if (st.confirm) (n.comments = n.comments || []).push({ id: uid('c-'), by: 'AI', at: t0, text: 'To confirm: ' + st.confirm, resolved: false });
+    if (n.flags.pain && !n.pain) n.pain = n.description || n.label;
+    if (type !== 'task' && n.subprocess) { notes.push(`"${n.label}" is no longer a step, so its sub-process was detached`); n.subprocess = null; }
+    if (type === 'task' && st.subprocess && !n.subprocess) kids.push([n, st.subprocess]);
+    if (type !== 'link') n.link = null;
+    n._link_to = type === 'link' ? st.link_to : null; nodes.push(n);
+  });
+  const removed = m.nodes.filter(n => !Object.values(ids).includes(n.id));
+  const oldE = Object.fromEntries(m.edges.map(e => [e.from + '>' + e.to, e])); const edges = [];
+  steps.forEach(st => (Array.isArray(st.next) ? st.next : []).forEach(nx => {
+    const to = typeof nx === 'string' ? nx : String(nx && nx.to); const label = typeof nx === 'object' && nx ? String(nx.label || '') : '';
+    const from = ids[String(st.id || '')]; if (!ids[to]) return notes.push(`"${st.label || st.id}" points to a missing step`);
+    const e = oldE[from + '>' + ids[to]]; edges.push({ id: e ? e.id : uid('e-'), from, to: ids[to], label });
+  }));
+  let resolved = 0; const byC = {}; nodes.forEach(n => (n.comments || []).forEach(c => byC[c.id] = c));
+  (Array.isArray(rev.resolve) ? rev.resolve : []).forEach(r => { const c = r && byC[r.comment_id]; if (c && !c.resolved) { c.resolved = true; c.text += ' | Answer (Claude): ' + String(r.answer || '').trim(); resolved++; } });
+  const pool = maps.filter(x => !x.parent);
+  nodes.forEach(n => { const ref = n._link_to; delete n._link_to; if (n.type !== 'link' || !ref) return;
+    const t = pool.find(x => x.process_id === ref || (x.process_name || '').toLowerCase() === String(ref).toLowerCase());
+    if (t) { n.link = { map_id: t.id }; n.label = n.label || mapLabel(t); } else if (!n.link) { n.label = n.label || String(ref); notes.push(`Link to "${ref}" not found: choose the map on the link node`); } });
+  const changes = (Array.isArray(rev.changes) ? rev.changes : []).map(String);
+  m.lanes = lanes.filter(l => nodes.some(n => n.lane === l.id) || (p.lanes || []).includes(l.name));
+  m.nodes = nodes; m.edges = edges;
+  const st0 = nodes.find(n => n.type === 'start');
+  if (st0) (st0.comments = st0.comments || []).push({ id: uid('c-'), by: 'AI', at: t0, resolved: false, text: 'Updated by Claude: ' + (changes.length ? changes.join('; ') : 'changes not listed') + (resolved ? `. Resolved ${resolved} comment(s) from the text.` : '') + ' Review and resolve.' });
+  removed.forEach(n => { if (n.subprocess) notes.push(`Removed "${n.label}" had a sub-process; it is detached but not deleted`); });
+  layoutMap(m); m.updated = t0; m.updated_by_claude = { at: t0, changes };
+  const subs = [];
+  kids.forEach(([n, sub]) => { const r = outlineToMaps({ processes: [Object.assign({ process_id: (m.process_id || 'P') + '.' + n.id.slice(1), process_name: n.label, lanes: m.lanes.map(l => l.name) }, sub)] }, { engagement: m.engagement, session: m.session, module: m.module, parent: { map_id: m.id, node_id: n.id } }); n.subprocess = r.made[0].id; subs.push(...r.made); });
+  return { changes, notes, subs, added: nodes.filter(n => !old[n.id]).length, removed: removed.length, resolved };
+}
+let sampleFn = null, draftCtl = null;
+async function initSample() {
+  try { if (window.claude && window.claude.use) sampleFn = await window.claude.use('sample'); } catch (e) { sampleFn = null; }
+  $('btnDraft').hidden = !sampleFn;
+}
+$('btnDraft').onclick = () => {
+  const selNode = sel && sel.kind === 'node' ? map.nodes.find(n => n.id === sel.id) : null;
+  const canSub = selNode && selNode.type === 'task' && !selNode.subprocess && !map.example;
+  const canUpd = !map.example && map.nodes.length > 0;
+  $('dMode').value = canSub ? 'sub' : canUpd ? 'update' : 'new'; $('dMode').querySelector('[value=sub]').disabled = !canSub; $('dMode').querySelector('[value=update]').disabled = !canUpd;
+  $('dEng').value = rootOf(map).example ? '' : rootOf(map).engagement; $('dPid').value = canSub ? (map.process_id || 'P') + '.' + selNode.id.slice(1) : ''; $('dName').value = canSub ? selNode.label : '';
+  $('dLanes').value = canSub ? map.lanes.map(l => l.name).join('\n') : ''; $('dStatus').textContent = ''; $('dGo').disabled = false; $('dStop').hidden = true;
+  draftModeUI(); $('dlgDraft').showModal(); setTimeout(() => $('dText').focus(), 0);
+};
+function draftModeUI() {
+  const upd = $('dMode').value === 'update';
+  document.querySelectorAll('#dlgDraft .dNew').forEach(e => e.hidden = upd); $('dUpdNote').hidden = !upd;
+  $('dTitle').textContent = upd ? 'Update this map with Claude' : 'Draft a map with Claude';
+  $('dTextLabel').textContent = upd ? 'What to change: describe the change ("add a three-way match after the invoice is entered"), or paste notes or a transcript with corrections' : 'What to map from: paste a description, a procedure, notes or part of a transcript';
+  $('dGo').textContent = upd ? 'Update the map' : 'Draft the map';
+}
+$('dMode').onchange = draftModeUI;
+$('dCancel').onclick = () => { if (draftCtl) draftCtl.abort(); $('dlgDraft').close(); };
+$('dStop').onclick = () => { if (draftCtl) draftCtl.abort(); };
+$('dGo').onclick = async () => {
+  const text = $('dText').value.trim(); if (!text) return ($('dStatus').textContent = 'Paste something to map from first.');
+  const mode = $('dMode').value; const lanes = $('dLanes').value.split('\n').map(x => x.trim()).filter(Boolean);
+  if (mode === 'update') return runUpdate(text);
+  const pid = $('dPid').value.trim(), name = $('dName').value.trim();
+  const prompt = `You are drafting a finance process map for a consulting workshop. Draft ONE process${mode === 'sub' ? ' (it is the sub-process inside the step "' + name + '")' : ''} from the text below. Add further processes only for "link" targets the text describes in detail.\n` +
+    `Process ID: ${pid || '(none)'}\nProcess name: ${name || '(choose a short name from the text)'}\n` + (lanes.length ? `Use these lanes, in this order: ${lanes.join(', ')}\n` : '') +
+    `\n${OUTLINE_SPEC}\n\nTEXT TO MAP:\n<text>\n${text.slice(0, 60000)}\n</text>`;
+  draftCtl = new AbortController(); $('dGo').disabled = true; $('dStop').hidden = false; $('dStatus').textContent = 'Claude is reading and drafting… this can take up to a minute.';
+  try {
+    const o = await sampleFn.json(prompt, { signal: draftCtl.signal, cache: false, onText: ({ text }) => { $('dStatus').textContent = `Drafting… ${text.length.toLocaleString()} characters written`; } });
+    if (!o || !Array.isArray(o.processes) || !o.processes.length) throw { code: 'invalid_json', message: 'no processes' };
+    o.processes[0].process_id = o.processes[0].process_id || pid; o.processes[0].process_name = name || o.processes[0].process_name;
+    if (lanes.length && !(o.processes[0].lanes || []).length) o.processes[0].lanes = lanes;
+    const eng = $('dEng').value.trim() || rootOf(map).engagement || '';
+    let parentRef = null, parentNode = null;
+    if (mode === 'sub' && sel && sel.kind === 'node') { parentNode = map.nodes.find(n => n.id === sel.id); parentRef = { map_id: map.id, node_id: parentNode.id }; o.processes = [o.processes[0]]; }
+    const { made, notes } = outlineToMaps(o, { engagement: eng, session: map.example ? '' : map.session, module: map.example ? 'GEN' : map.module, parent: parentRef });
+    maps.push(...made); for (const m of made) await store.save(m);
+    if (parentNode) { snapshot(); parentNode.subprocess = made[0].id; await store.save(map); }
+    $('dlgDraft').close(); if (parentNode) goTo(made[0].id); else openMap(made[0]); refreshSelect();
+    const steps = made.reduce((a, m) => a + m.nodes.filter(n => n.type === 'task').length, 0);
+    toast(`Drafted ${made.length} map${made.length > 1 ? 's' : ''}, ${steps} steps. Review the comments marked AI.` + (notes.length ? ' ' + notes[0] : ''));
+  } catch (e) {
+    const c = e && e.code;
+    $('dStatus').textContent = c === 'cancelled' ? 'Stopped.' : c === 'not_granted' || c === 'sampling_disabled' ? 'Claude is not available to this page for your account.' : c === 'rate_limited' ? 'Too many requests just now. Try again in a minute.' : c === 'invalid_json' ? 'Claude did not return a usable map. Try again, or shorten the text.' : c === 'prompt_too_large' ? 'The text is too long. Paste a shorter section.' : 'Something went wrong. Try again.';
+    if (c === 'not_granted' || c === 'sampling_disabled') $('btnDraft').hidden = true;
+  } finally { draftCtl = null; $('dGo').disabled = false; $('dStop').hidden = true; }
+};
+
+async function runUpdate(text) {
+  const target = map;
+  const prompt = `You are updating an existing finance process map for a consulting workshop. Apply the instruction or the source text below to the current map.\n\nCURRENT MAP (JSON):\n${JSON.stringify(mapToOutline(target))}\n\n${UPDATE_SPEC}\n\nINSTRUCTION OR SOURCE TEXT:\n<text>\n${text.slice(0, 50000)}\n</text>`;
+  draftCtl = new AbortController(); $('dGo').disabled = true; $('dStop').hidden = false; $('dStatus').textContent = 'Claude is reading the map and making the changes… this can take up to a minute.';
+  try {
+    const o = await sampleFn.json(prompt, { signal: draftCtl.signal, cache: false, onText: ({ text }) => { $('dStatus').textContent = `Updating… ${text.length.toLocaleString()} characters written`; } });
+    if (!o || !Array.isArray(o.processes) || !o.processes.length) throw { code: 'invalid_json' };
+    if (map !== target) throw { code: 'moved' };
+    snapshot(); const r = mergeUpdate(map, o);
+    maps.push(...r.subs); for (const m of r.subs) await store.save(m);
+    $('dlgDraft').close(); changed(); refreshSelect(); render(); fit();
+    toast(`Updated: ${r.changes.length} change${r.changes.length === 1 ? '' : 's'}` + (r.added ? `, ${r.added} step${r.added === 1 ? '' : 's'} added` : '') + (r.removed ? `, ${r.removed} removed` : '') + (r.resolved ? `, ${r.resolved} comment${r.resolved === 1 ? '' : 's'} answered` : '') + '. See the comment on Start; Ctrl+Z undoes.' + (r.notes.length ? ' ' + r.notes[0] : ''));
+  } catch (e) {
+    const c = e && e.code;
+    $('dStatus').textContent = c === 'moved' ? 'You switched maps while Claude was working. Open the map again and retry.' : c === 'cancelled' ? 'Stopped.' : c === 'not_granted' || c === 'sampling_disabled' ? 'Claude is not available to this page for your account.' : c === 'rate_limited' ? 'Too many requests just now. Try again in a minute.' : c === 'invalid_json' ? 'Claude did not return a usable map. Try again, or make the request more specific.' : c === 'prompt_too_large' ? 'The map and text together are too long. Paste a shorter section.' : 'Something went wrong. Try again.';
+    if (c === 'not_granted' || c === 'sampling_disabled') $('btnDraft').hidden = true;
+  } finally { draftCtl = null; $('dGo').disabled = false; $('dStop').hidden = true; }
+}
+
+// ---------- breadcrumbs ----------
+function renderCrumbs() {
+  const c = $('crumbs'); const ch = chain(map); let h = '';
+  if (navStack.length) h += `<button data-back="1">← Back</button>`;
+  if (ch.length > 1 || navStack.length) {
+    h += ch.map((m, i) => {
+      const last = i === ch.length - 1;
+      const stepName = i > 0 && m.parent ? ((byId(m.parent.map_id) || { nodes: [] }).nodes.find(n => n.id === m.parent.node_id) || {}).label : null;
+      const txt = esc(i === 0 ? mapLabel(m) : (stepName || m.process_name));
+      return (i ? '<span class="arrow">›</span>' : '') + (last ? `<span class="cur">${txt}</span>` : `<button data-crumb="${m.id}">${txt}</button>`);
+    }).join('');
+  }
+  c.innerHTML = h; c.style.display = h ? 'flex' : 'none';
+  c.querySelectorAll('[data-crumb]').forEach(b => b.onclick = () => goTo(b.dataset.crumb, { viaCrumb: true }));
+  const bk = c.querySelector('[data-back]'); if (bk) bk.onclick = goBack;
+}
+function goTo(id, o) {
+  const m = byId(id); if (!m) return toast('That map is not in this browser or store. Import it first.');
+  if (editing) endEdit(true);
+  if (!(o && o.viaCrumb) && map && rootOf(m).id !== rootOf(map).id) navStack.push(map.id);
+  openMap(m, true);
+}
+function goBack() { const id = navStack.pop(); if (id && byId(id)) openMap(byId(id), true); }
+function goUp() { if (map.parent && byId(map.parent.map_id)) { const pid = map.parent; openMap(byId(pid.map_id), true); sel = { kind: 'node', id: pid.node_id }; render(); } else goBack(); }
+async function openSubprocess(n) {
+  if (n.type !== 'task') return toast('Only a step can have a sub-process.');
+  if (n.subprocess && byId(n.subprocess)) return goTo(n.subprocess);
+  if (map.example) return toast('This is an example. Create a new map to start capturing.');
+  snapshot();
+  const child = blankMap({ engagement: map.engagement, session: map.session, module: map.module, process_id: (map.process_id || 'P') + '.' + n.id.replace(/^n/, ''),
+    process_name: n.label || 'Sub-process', lanes: map.lanes.map(l => l.name), parent: { map_id: map.id, node_id: n.id } });
+  child.nodes.push(blankNode({ id: 'n1', type: 'start', label: 'Start', lane: child.lanes[0].id, x: X0 }));
+  n.subprocess = child.id; maps.push(child);
+  await store.save(map); await store.save(child);
+  goTo(child.id); sel = { kind: 'node', id: 'n1' }; render();
+  toast('Sub-process created. Press Enter to add its first step; U goes back up.');
+}
+async function removeTree(m) { for (const d of descendants(m)) { await store.remove(d.id); maps = maps.filter(x => x.id !== d.id); } await store.remove(m.id); maps = maps.filter(x => x.id !== m.id); }
+
+// ---------- side panel ----------
+function pl(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function renderPanel() {
+  const p = $('panel');
+  if (document.activeElement && p.contains(document.activeElement) && document.activeElement.dataset.live) return; // don't clobber typing
+  if (sel && sel.kind === 'node') {
+    const n = map.nodes.find(x => x.id === sel.id); if (!n) { sel = null; return renderPanel(); }
+    const f = n.flags || {};
+    const laneOpts = map.lanes.map(l => `<option value="${l.id}" ${l.id === n.lane ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
+    const typeOpts = Object.keys(TYPE_NAME).map(t => `<option value="${t}" ${t === n.type ? 'selected' : ''}>${TYPE_NAME[t]}</option>`).join('');
+    const cm = (n.comments || []).map(c => `<div class="comment ${c.resolved ? 'resolved' : ''}"><div class="meta"><span><b>${esc(c.by)}</b> · ${new Date(c.at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span><span><button data-resolve="${c.id}">${c.resolved ? 'Reopen' : 'Resolve'}</button> <button data-delc="${c.id}" aria-label="Delete comment">✕</button></span></div><p>${esc(c.text)}</p></div>`).join('') || '<p class="empty">No comments yet.</p>';
+    p.innerHTML = `
+      <div class="card"><h2>${TYPE_NAME[n.type]} <span class="mono muted">${n.id}</span></h2>
+        <div><label for="fLabel">Name</label><input id="fLabel" data-live="1" value="${esc(n.label)}"></div>
+        <div><label for="fDesc">Description</label><textarea id="fDesc" data-live="1" rows="3" placeholder="What happens here, in full">${esc(n.description)}</textarea></div>
+        <div class="row2"><div><label for="fLane">Lane (role)</label><select id="fLane">${laneOpts}</select></div><div><label for="fType">Type</label><select id="fType">${typeOpts}</select></div></div>
+        <div class="row2"><div><label for="fSystem">System</label><input id="fSystem" data-live="1" value="${esc(n.system)}" placeholder="e.g. NetSuite"></div>${n.type === 'task' ? `<div><label for="fMin">Minutes per item</label><input id="fMin" data-live="1" type="number" min="0" step="0.5" value="${esc(n.minutes)}"></div>` : '<div></div>'}</div>
+        ${n.type === 'task' ? (n.subprocess && byId(n.subprocess)
+          ? `<div class="links-list"><button id="openSub" class="primary">Open sub-process (${byId(n.subprocess).nodes.filter(x => x.type === 'task').length} steps) ⊞</button><button id="delSub">Remove sub-process</button></div>`
+          : `<button id="openSub">Break this step into a sub-process ⊞</button>`) : ''}
+        ${n.type === 'link' ? `<div><label for="fLink">Linked process</label><select id="fLink"><option value="">Choose a process map…</option>${maps.filter(m => !m.parent && m.id !== rootOf(map).id).map(m => `<option value="${m.id}" ${n.link && n.link.map_id === m.id ? 'selected' : ''}>${esc((m.engagement ? m.engagement + ' · ' : '') + mapLabel(m))}</option>`).join('')}</select></div>
+          <div class="row2"><div><label for="fNewPid">New process ID</label><input id="fNewPid" placeholder="P-03"></div><div><label for="fNewName">New process name</label><input id="fNewName" placeholder="Goods receipt"></div></div>
+          <div class="links-list"><button id="newLinked">Create a new process map and link it</button>${n.link && byId(n.link.map_id) ? '<button id="openLink" class="primary">Open linked process ↗</button>' : ''}</div>` : ''}
+        <div class="flags">
+          <label class="flag manual ${f.manual ? 'on' : ''}"><input type="checkbox" data-flag="manual" ${f.manual ? 'checked' : ''}>Manual work</label>
+          <label class="flag control ${f.control ? 'on' : ''}"><input type="checkbox" data-flag="control" ${f.control ? 'checked' : ''}>Control / approval</label>
+          <label class="flag pain ${f.pain ? 'on' : ''}"><input type="checkbox" data-flag="pain" ${f.pain ? 'checked' : ''}>Pain point</label>
+          <label class="flag idea ${f.idea ? 'on' : ''}"><input type="checkbox" data-flag="idea" ${f.idea ? 'checked' : ''}>Automation idea</label>
+        </div>
+        ${f.pain ? `<div><label for="fPain">Pain point and impact (hours, errors, risk)</label><textarea id="fPain" data-live="1">${esc(n.pain)}</textarea></div>` : ''}
+        ${f.idea ? `<div><label for="fIdea">Idea (library ref if known)</label><textarea id="fIdea" data-live="1">${esc(n.idea)}</textarea></div>` : ''}
+        <div><label for="fNotes">Notes (rules, exceptions, volumes said in the room)</label><textarea id="fNotes" data-live="1">${esc(n.notes)}</textarea></div>
+      </div>
+      <div class="card"><h2>Comments</h2><div class="comments">${cm}</div>
+        <div><label for="fComment">New comment or open question</label><textarea id="fComment" placeholder="e.g. Confirm approval limit with FC"></textarea></div>
+        <button id="addComment" class="primary">Add comment</button>
+      </div>
+      <button id="delNode">Delete this ${n.type === 'task' ? 'step' : 'node'}</button>`;
+    bindNodePanel(n);
+  } else if (sel && sel.kind === 'edge') {
+    const e = map.edges.find(x => x.id === sel.id); if (!e) { sel = null; return renderPanel(); }
+    const a = map.nodes.find(n => n.id === e.from), b = map.nodes.find(n => n.id === e.to);
+    p.innerHTML = `<div class="card"><h2>Connector</h2><p class="note">${esc(a && a.label)} → ${esc(b && b.label)}</p>
+      <div><label for="fEdge">Label or condition</label><input id="fEdge" data-live="1" value="${esc(e.label)}" placeholder="e.g. Yes, No, Over $500"></div>
+      <div class="flags">${['Yes', 'No', 'Approved', 'Rejected', 'Exception'].map(s => `<button data-quick="${s}">${s}</button>`).join('')}</div>
+      <button id="delEdge">Delete connector</button></div>`;
+    const inp = $('fEdge');
+    inp.oninput = () => { e.label = inp.value; changed(false); renderCanvasOnly(); };
+    inp.onchange = () => commit();
+    p.querySelectorAll('[data-quick]').forEach(b => b.onclick = () => { snapshot(); e.label = b.dataset.quick; changed(); render(); });
+    $('delEdge').onclick = () => deleteSel();
+  } else {
+    const stats = mapStats();
+    p.innerHTML = `<div class="card"><h2>Map</h2>
+      <div class="row2"><div><label for="mPid">Process ID</label><input id="mPid" data-live="1" value="${esc(map.process_id)}"></div><div><label for="mSession">Session</label><input id="mSession" data-live="1" value="${esc(map.session)}"></div></div>
+      <div><label for="mName">Process name</label><input id="mName" data-live="1" value="${esc(map.process_name)}"></div>
+      <div class="row2"><div><label for="mEng">Engagement</label><input id="mEng" data-live="1" value="${esc(map.engagement)}"></div><div><label for="mModule">Module</label><select id="mModule">${['EXP', 'BNK', 'CFF', 'GEN'].map(m => `<option ${m === map.module ? 'selected' : ''}>${m}</option>`).join('')}</select></div></div>
+      ${map.example ? '<p class="note"><b>This is an example map.</b> Start your own with New map.</p>' : ''}
+      ${map.parent && byId(map.parent.map_id) ? `<p class="note">Sub-process of <b>${esc(mapLabel(byId(map.parent.map_id)))}</b>.</p><button id="goParent">↑ Back to the parent process</button>` : ''}
+      ${(() => { const lf = linkedFrom(map), lt = map.nodes.filter(n => n.type === 'link' && n.link && byId(n.link.map_id)); if (!lf.length && !lt.length) return ''; return `<div class="links-list">${lf.map(x => `<button data-goto="${x.map.id}">← Linked from ${esc(mapLabel(x.map))}</button>`).join('')}${lt.map(n => `<button data-goto="${n.link.map_id}">→ Links to ${esc(mapLabel(byId(n.link.map_id)))}</button>`).join('')}</div>`; })()}
+      <p class="note">${pl(stats.steps, 'step')} · ${pl(stats.decisions, 'decision')} · ${stats.manual} manual · ${pl(stats.controls, 'control')} · ${pl(stats.pain, 'pain point')} · ${pl(stats.open, 'open comment')}${stats.minutes ? ' · ' + stats.minutes + ' min per item' : ''}</p></div>
+      <div class="card"><h2>Swimlanes (roles)</h2><div class="lanes-list">${map.lanes.map((l, i) => `<div class="lane-row"><input data-lane="${l.id}" data-live="1" value="${esc(l.name)}" aria-label="Lane name"><button data-up="${i}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button><button data-down="${i}" aria-label="Move down" ${i === map.lanes.length - 1 ? 'disabled' : ''}>↓</button><button data-dellane="${l.id}" aria-label="Delete lane">✕</button></div>`).join('')}</div>
+      <button id="addLane">Add lane</button></div>
+      <div class="card"><h2>Capture tips</h2><p class="note">Follow one real item end to end. Put each step in the lane of the role who does it. Use a decision for "either/or", AND when several things must all happen, OR when one or more may happen. Flag manual work, controls and pain points as you go, and add a comment for anything to confirm later.</p></div>
+      <button id="delMap">Delete this map</button>`;
+    if ($('goParent')) $('goParent').onclick = goUp;
+    p.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => goTo(b.dataset.goto));
+    const bindM = (id, key) => { const i = $(id); i.oninput = () => { map[key] = i.value; changed(false); renderCanvasOnly(); refreshSelect(); }; i.onchange = () => commit(); };
+    bindM('mPid', 'process_id'); bindM('mSession', 'session'); bindM('mName', 'process_name'); bindM('mEng', 'engagement');
+    $('mModule').onchange = e => { snapshot(); map.module = e.target.value; changed(); };
+    p.querySelectorAll('[data-lane]').forEach(i => { i.oninput = () => { map.lanes.find(l => l.id === i.dataset.lane).name = i.value; changed(false); renderCanvasOnly(); }; i.onchange = () => commit(); });
+    p.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { const i = +b.dataset.up; snapshot(); [map.lanes[i - 1], map.lanes[i]] = [map.lanes[i], map.lanes[i - 1]]; changed(); render(); });
+    p.querySelectorAll('[data-down]').forEach(b => b.onclick = () => { const i = +b.dataset.down; snapshot(); [map.lanes[i + 1], map.lanes[i]] = [map.lanes[i], map.lanes[i + 1]]; changed(); render(); });
+    p.querySelectorAll('[data-dellane]').forEach(b => b.onclick = () => {
+      const id = b.dataset.dellane; const used = map.nodes.filter(n => n.lane === id).length;
+      if (map.lanes.length === 1) return toast('A map needs at least one lane.');
+      if (used) return toast(`Move or delete the ${used} node(s) in this lane first.`);
+      snapshot(); map.lanes = map.lanes.filter(l => l.id !== id); changed(); render();
+    });
+    $('addLane').onclick = () => { snapshot(); map.lanes.push({ id: uid('l-'), name: 'New role' }); changed(); render(); };
+    $('delMap').onclick = () => confirmBox('Delete this map?', `"${map.process_name}" and its sub-processes will be removed from this browser${store.mode === 'db' ? ' and this page\'s store' : ''}. Export it first if you need a copy.`, async () => {
+      const parentRef = map.parent; await removeTree(map);
+      if (parentRef && byId(parentRef.map_id)) { const pm = byId(parentRef.map_id); const pn = pm.nodes.find(n => n.id === parentRef.node_id); if (pn) { pn.subprocess = null; await store.save(pm); } openMap(pm, true); }
+      else openMap(maps.find(m => !m.parent) || exampleMap());
+    });
+  }
+}
+function bindNodePanel(n) {
+  const live = (id, key, num) => { const i = $(id); if (!i) return; i.oninput = () => { n[key] = num ? (i.value === '' ? '' : +i.value) : i.value; changed(false); renderCanvasOnly(); }; i.onchange = () => commit(); };
+  live('fLabel', 'label'); live('fDesc', 'description'); live('fSystem', 'system'); live('fMin', 'minutes', true); live('fPain', 'pain'); live('fIdea', 'idea'); live('fNotes', 'notes');
+  $('fLane').onchange = e => { snapshot(); n.lane = e.target.value; n.slot = freeSlot(n.lane, n.x, n.id); changed(); render(); };
+  $('fType').onchange = e => { snapshot(); n.type = e.target.value; changed(); render(); };
+  document.querySelectorAll('[data-flag]').forEach(c => c.onchange = () => { snapshot(); n.flags = n.flags || {}; n.flags[c.dataset.flag] = c.checked; changed(); render(); });
+  $('addComment').onclick = () => addComment(n);
+  if ($('openSub')) $('openSub').onclick = () => openSubprocess(n);
+  if ($('delSub')) $('delSub').onclick = () => { const child = byId(n.subprocess); confirmBox('Remove this sub-process?', `The sub-process "${child ? child.process_name : ''}" and anything inside it will be deleted. Export it first if you need a copy.`, async () => { snapshot(); if (child) await removeTree(child); n.subprocess = null; changed(); render(); }); };
+  if ($('fLink')) $('fLink').onchange = e => { snapshot(); n.link = e.target.value ? { map_id: e.target.value } : null; const t = n.link && byId(n.link.map_id); if (t && !n.label) n.label = mapLabel(t); changed(); render(); };
+  if ($('openLink')) $('openLink').onclick = () => goTo(n.link.map_id);
+  if ($('newLinked')) $('newLinked').onclick = async () => {
+    const name = ($('fNewName').value || n.label || '').trim(); if (!name) return toast('Give the new process a name.');
+    const m = blankMap({ engagement: map.engagement, session: map.session, module: 'GEN', process_id: $('fNewPid').value.trim(), process_name: name, lanes: map.lanes.map(l => l.name) });
+    m.nodes.push(blankNode({ id: 'n1', type: 'start', label: 'Start', lane: m.lanes[0].id, x: X0 }));
+    maps.push(m); await store.save(m); snapshot(); n.link = { map_id: m.id }; n.label = mapLabel(m); changed(); render(); refreshSelect(); toast('Process created and linked. Open it with ↗.');
+  };
+  $('fComment').onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addComment(n); };
+  document.querySelectorAll('[data-resolve]').forEach(b => b.onclick = () => { snapshot(); const c = n.comments.find(c => c.id === b.dataset.resolve); c.resolved = !c.resolved; changed(); render(); });
+  document.querySelectorAll('[data-delc]').forEach(b => b.onclick = () => { snapshot(); n.comments = n.comments.filter(c => c.id !== b.dataset.delc); changed(); render(); });
+  $('delNode').onclick = () => deleteSel();
+}
+function addComment(n) {
+  const t = $('fComment').value.trim(); if (!t) return;
+  snapshot(); n.comments = n.comments || []; n.comments.push({ id: uid('c-'), by: initials(), at: now(), text: t, resolved: false }); changed(); render();
+  setTimeout(() => { const f = $('fComment'); if (f) f.focus(); }, 0);
+}
+function renderCanvasOnly() { const keep = $('panel'); const active = document.activeElement; render(); if (active && keep.contains(active)) active.focus(); }
+function mapStats(m) {
+  const ns = (m || map).nodes; return { steps: ns.filter(n => n.type === 'task').length, decisions: ns.filter(n => ['xor', 'and', 'or'].includes(n.type)).length,
+    manual: ns.filter(n => n.flags && n.flags.manual).length, controls: ns.filter(n => n.flags && n.flags.control).length, pain: ns.filter(n => n.flags && n.flags.pain).length,
+    open: ns.reduce((s, n) => s + (n.comments || []).filter(c => !c.resolved).length, 0), minutes: ns.reduce((s, n) => s + (+n.minutes || 0), 0) };
+}
+
+// ---------- editing ----------
+function snapshot() { undoStack.push(JSON.stringify(map)); if (undoStack.length > 80) undoStack.shift(); redoStack = []; }
+function commit() { changed(); }
+function changed(scheduleOnly) { map.updated = now(); $('saveState').textContent = 'Saving…'; clearTimeout(saveTimer); saveTimer = setTimeout(persist, 900); }
+async function persist() {
+  if (map.example) { $('saveState').textContent = 'Example map (not saved)'; return; }
+  const ok = await store.save(map); const i = maps.findIndex(m => m.id === map.id); if (i < 0) maps.push(map); else maps[i] = map;
+  $('saveState').textContent = ok ? `Saved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${store.mode === 'db' ? '' : ' in this browser'}` : 'Not saved: export JSON to keep it';
+}
+function undo() { if (!undoStack.length) return; redoStack.push(JSON.stringify(map)); map = JSON.parse(undoStack.pop()); fixSel(); changed(); render(); }
+function redo() { if (!redoStack.length) return; undoStack.push(JSON.stringify(map)); map = JSON.parse(redoStack.pop()); fixSel(); changed(); render(); }
+function fixSel() { if (sel && !(sel.kind === 'node' ? map.nodes : map.edges).some(x => x.id === sel.id)) sel = null; }
+function nextId() { let i = 1; const ids = new Set(map.nodes.map(n => n.id)); while (ids.has('n' + i)) i++; return 'n' + i; }
+function freeSlot(lane, x, except) { let s = 0; while (map.nodes.some(n => n.id !== except && n.lane === lane && (n.slot || 0) === s && Math.abs(n.x - x) < 150)) s++; return s; }
+function addNode(type, opts) {
+  if (map.example) return toast('This is an example. Create a new map to start capturing.');
+  snapshot(); opts = opts || {};
+  const from = sel && sel.kind === 'node' ? map.nodes.find(n => n.id === sel.id) : null;
+  let lane = map.lanes[0].id, x = X0;
+  if (from) {
+    const li = laneIndex(from.lane) + (opts.laneDelta || 0);
+    lane = map.lanes[Math.max(0, Math.min(map.lanes.length - 1, li))].id;
+    const fw = SIZE[from.type][0]; x = from.x + fw + 60;
+  } else if (map.nodes.length) {
+    x = Math.max(...map.nodes.map(n => n.x + SIZE[n.type][0])) + 60;
+  }
+  const n = blankNode({ id: nextId(), type, label: { start: 'Start', end: 'End', xor: 'Decision?', and: '', or: '', link: '' }[type] ?? '', lane, x });
+  n.slot = freeSlot(lane, x);
+  map.nodes.push(n);
+  if (from && from.type !== 'end') map.edges.push({ id: uid('e-'), from: from.id, to: n.id, label: '' });
+  sel = { kind: 'node', id: n.id }; changed(); render();
+  if (type === 'task' || type === 'xor' || type === 'start' || type === 'end') startEdit(n);
+  if (type === 'link') setTimeout(() => { const f = $('fLink'); if (f) f.focus(); }, 0);
+}
+function deleteSel() {
+  if (!sel) return; snapshot();
+  if (sel.kind === 'node') {
+    const n = map.nodes.find(x => x.id === sel.id);
+    if (n && n.subprocess && byId(n.subprocess)) { undoStack.pop(); const child = byId(n.subprocess); return confirmBox('Delete this step and its sub-process?', `"${n.label}" has a sub-process with ${child.nodes.filter(x => x.type === 'task').length} steps. Both will be deleted.`, async () => { snapshot(); await removeTree(child); map.nodes = map.nodes.filter(x => x.id !== n.id); map.edges = map.edges.filter(e => e.from !== n.id && e.to !== n.id); sel = null; changed(); render(); }); }
+    map.nodes = map.nodes.filter(n => n.id !== sel.id); map.edges = map.edges.filter(e => e.from !== sel.id && e.to !== sel.id);
+  }
+  else map.edges = map.edges.filter(e => e.id !== sel.id);
+  sel = null; changed(); render();
+}
+function toggleFlag(f) { if (!sel || sel.kind !== 'node') return; const n = map.nodes.find(x => x.id === sel.id); snapshot(); n.flags = n.flags || {}; n.flags[f] = !n.flags[f]; changed(); render(); }
+
+// inline label editing
+let editing = null;
+function startEdit(n) {
+  editing = n; const b = nodeBox(n); const box = $('editBox'); const inp = $('editInput');
+  const w = Math.max(170, b.w) * view.k, h = (n.type === 'task' ? b.h : 52) * view.k;
+  const sx = view.x + (n.type === 'task' ? b.x : b.cx - Math.max(170, b.w) / 2) * view.k;
+  const sy = view.y + (n.type === 'task' ? b.y : b.y + b.h + 4) * view.k;
+  Object.assign(box.style, { display: 'block', left: sx + 'px', top: sy + 'px', width: w + 'px', height: Math.max(36, h) + 'px' });
+  inp.value = n.label; inp.focus(); inp.select();
+}
+function endEdit(save) {
+  if (!editing) return; const n = editing; editing = null; $('editInput').blur(); $('editBox').style.display = 'none';
+  const v = $('editInput').value.trim();
+  if (save && v !== n.label) { snapshot(); n.label = v; changed(); }
+  render(); svg.focus && svg.focus();
+}
+$('editInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); endEdit(true); }
+  else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
+  else if (e.key === 'Tab') { e.preventDefault(); endEdit(true); addNode('task'); }
+});
+$('editInput').addEventListener('blur', () => endEdit(true));
+
+// ---------- layout ----------
+function layoutMap(m) {
+  if (!m.nodes.length) return;
+  const out = {}, indeg = {}; m.nodes.forEach(n => { out[n.id] = []; indeg[n.id] = 0; });
+  const state = {}, forward = [];
+  const visit = id => { state[id] = 1; for (const e of m.edges.filter(e => e.from === id)) { if (state[e.to] === 1 || !out[e.to]) continue; forward.push(e); if (!state[e.to]) visit(e.to); } state[id] = 2; };
+  const starts = m.nodes.filter(n => n.type === 'start' || !m.edges.some(e => e.to === n.id)).sort((a, b) => a.x - b.x);
+  starts.forEach(n => { if (!state[n.id]) visit(n.id); });
+  m.nodes.slice().sort((a, b) => a.x - b.x).forEach(n => { if (!state[n.id]) visit(n.id); });
+  [...new Set(forward)].forEach(e => { out[e.from].push(e.to); indeg[e.to]++; });
+  const layer = {}; const q = m.nodes.filter(n => indeg[n.id] === 0).map(n => n.id); q.forEach(id => layer[id] = 0);
+  const deg = Object.assign({}, indeg);
+  while (q.length) { const id = q.shift(); for (const t of out[id]) { layer[t] = Math.max(layer[t] || 0, layer[id] + 1); if (--deg[t] === 0) q.push(t); } }
+  const used = {};
+  m.nodes.slice().sort((a, b) => ((layer[a.id] || 0) - (layer[b.id] || 0)) || ((a.slot || 0) - (b.slot || 0))).forEach(n => {
+    n.x = X0 + (layer[n.id] || 0) * COL + (n.type === 'task' ? 0 : (SIZE.task[0] - SIZE[n.type][0]) / 2);
+    const key = n.lane + ':' + (layer[n.id] || 0); n.slot = used[key] || 0; used[key] = n.slot + 1;
+  });
+}
+function tidy() { if (!map.nodes.length) return; snapshot(); layoutMap(map); changed(); render(); fit(); }
+
+// ---------- pointer interaction ----------
+function toWorld(ev) { const r = svg.getBoundingClientRect(); return { x: (ev.clientX - r.left - view.x) / view.k, y: (ev.clientY - r.top - view.y) / view.k }; }
+function nodeAt(p) { return map.nodes.slice().reverse().find(n => { const b = nodeBox(n); return p.x >= b.x - 4 && p.x <= b.x + b.w + 4 && p.y >= b.y - 4 && p.y <= b.y + b.h + 4; }); }
+svg.addEventListener('pointerdown', ev => {
+  if (editing) endEdit(true);
+  if (document.activeElement && $('panel').contains(document.activeElement)) document.activeElement.blur();
+  const t = ev.target; const p = toWorld(ev);
+  const op = t.closest('[data-open]'); if (op) { goTo(op.dataset.open); return; }
+  const h = t.closest('[data-handle]'); const ng = t.closest('[data-node]'); const eg = t.closest('[data-edge]');
+  const present = document.body.classList.contains('present');
+  if (h && !present) { const n = map.nodes.find(n => n.id === h.dataset.handle); const b = nodeBox(n); connecting = { from: n.id, x1: b.x + b.w + 9, y1: b.cy, x2: p.x, y2: p.y }; svg.setPointerCapture(ev.pointerId); return; }
+  if (ng) {
+    const n = map.nodes.find(n => n.id === ng.dataset.node); sel = { kind: 'node', id: n.id };
+    if (!present && !map.example) { dragging = { id: n.id, dx: p.x - n.x, start: JSON.stringify(map), moved: false }; svg.setPointerCapture(ev.pointerId); }
+    render(); return;
+  }
+  if (eg) { sel = { kind: 'edge', id: eg.dataset.edge }; render(); return; }
+  sel = null; panning = { x: ev.clientX - view.x, y: ev.clientY - view.y }; svg.setPointerCapture(ev.pointerId); render();
+});
+svg.addEventListener('pointermove', ev => {
+  const p = toWorld(ev);
+  if (connecting) { connecting.x2 = p.x; connecting.y2 = p.y; render(); return; }
+  if (dragging) {
+    const n = map.nodes.find(n => n.id === dragging.id); dragging.moved = true;
+    n.x = Math.max(LANE_HEADER + 20, Math.round((p.x - dragging.dx) / 10) * 10);
+    // lane + slot from y
+    let li = 0; while (li < map.lanes.length - 1 && p.y > laneTop(li + 1)) li++;
+    n.lane = map.lanes[Math.max(0, li)].id;
+    n.slot = Math.max(0, Math.min(laneSlots(li) + 1, Math.floor((p.y - laneTop(li) - (LANE_BASE / 2 - SLOT / 2)) / SLOT)));
+    render(); return;
+  }
+  if (panning) { view.x = ev.clientX - panning.x; view.y = ev.clientY - panning.y; applyView(); }
+});
+svg.addEventListener('pointerup', ev => {
+  if (connecting) {
+    const target = nodeAt(toWorld(ev)); const from = connecting.from; connecting = null;
+    if (target && target.id !== from && !map.edges.some(e => e.from === from && e.to === target.id)) { snapshot(); const e = { id: uid('e-'), from, to: target.id, label: '' }; map.edges.push(e); sel = { kind: 'edge', id: e.id }; changed(); }
+    render(); return;
+  }
+  if (dragging) { if (dragging.moved) { undoStack.push(dragging.start); redoStack = []; changed(); } dragging = null; render(); return; }
+  panning = null;
+});
+svg.addEventListener('dblclick', ev => { const ng = ev.target.closest('[data-node]'); if (ng && !map.example) startEdit(map.nodes.find(n => n.id === ng.dataset.node)); });
+svg.addEventListener('wheel', ev => {
+  ev.preventDefault(); const r = svg.getBoundingClientRect(); const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  const k = Math.max(0.3, Math.min(2.5, view.k * (ev.deltaY < 0 ? 1.1 : 1 / 1.1)));
+  view.x = mx - (mx - view.x) * (k / view.k); view.y = my - (my - view.y) * (k / view.k); view.k = k; applyView();
+}, { passive: false });
+function applyView() { const w = $('world'); if (w) w.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`); if (editing) { const n = editing; editing = null; $('editBox').style.display = 'none'; startEdit(n); } }
+function fit() {
+  const r = svg.getBoundingClientRect(); const W = contentWidth(), H = totalHeight() + 40;
+  view.k = Math.max(0.3, Math.min(1.4, Math.min((r.width - 40) / W, (r.height - 96) / H)));
+  view.x = 20; view.y = (chain(map).length > 1 || navStack.length) ? 76 : 40; render();
+}
+$('zoomIn').onclick = () => { view.k = Math.min(2.5, view.k * 1.15); applyView(); };
+$('zoomOut').onclick = () => { view.k = Math.max(0.3, view.k / 1.15); applyView(); };
+$('zoomFit').onclick = fit;
+
+// ---------- keyboard ----------
+function neighbour(dir) {
+  if (!sel || sel.kind !== 'node') return;
+  const id = sel.id; let cand = [];
+  if (dir === 'ArrowRight') cand = map.edges.filter(e => e.from === id).map(e => e.to);
+  if (dir === 'ArrowLeft') cand = map.edges.filter(e => e.to === id).map(e => e.from);
+  if (dir === 'ArrowUp' || dir === 'ArrowDown') {
+    const n = map.nodes.find(n => n.id === id); const b = nodeBox(n);
+    const others = map.nodes.filter(o => o.id !== id).map(o => ({ o, b: nodeBox(o) })).filter(x => dir === 'ArrowUp' ? x.b.cy < b.cy : x.b.cy > b.cy);
+    others.sort((p, q) => Math.hypot(p.b.cx - b.cx, p.b.cy - b.cy) - Math.hypot(q.b.cx - b.cx, q.b.cy - b.cy)); cand = others.slice(0, 1).map(x => x.o.id);
+  }
+  if (cand.length) { sel = { kind: 'node', id: cand[0] }; render(); }
+}
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || document.querySelector('dialog[open]')) return;
+  const k = e.key;
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'z') { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'y') { e.preventDefault(); return redo(); }
+  if (k === 'Enter') { e.preventDefault(); return addNode('task', { laneDelta: e.shiftKey ? 1 : (e.ctrlKey || e.metaKey) ? -1 : 0 }); }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if ('xXaAoOeEmMkK!lLpP?jJsSuU'.includes(k)) e.preventDefault();
+  if (k === 'j' || k === 'J') return addNode('link');
+  if ((k === 's' || k === 'S') && sel && sel.kind === 'node') return openSubprocess(map.nodes.find(n => n.id === sel.id));
+  if (k === 'u' || k === 'U') return goUp();
+  if (k === 'x' || k === 'X') return addNode('xor');
+  if (k === 'a' || k === 'A') return addNode('and');
+  if (k === 'o' || k === 'O') return addNode('or');
+  if (k === 'e' || k === 'E') return addNode('end');
+  if (k === 'F2' && sel && sel.kind === 'node') { e.preventDefault(); return startEdit(map.nodes.find(n => n.id === sel.id)); }
+  if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); return deleteSel(); }
+  if (k === 'm' || k === 'M') return toggleFlag('manual');
+  if (k === 'k' || k === 'K') return toggleFlag('control');
+  if (k === '!') return toggleFlag('pain');
+  if (k === 'c' || k === 'C') { const f = $('fComment'); if (f) { e.preventDefault(); f.focus(); } return; }
+  if (k === 'l' || k === 'L') return tidy();
+  if (k === 'p' || k === 'P') return togglePresent();
+  if (k === '?') return $('dlgHelp').showModal();
+  if (k === 'Escape') { sel = null; render(); return; }
+  if (k.startsWith('Arrow')) { e.preventDefault(); return neighbour(k); }
+});
+
+// ---------- toolbar ----------
+$('addStart').onclick = () => addNode('start');
+$('addTask').onclick = () => addNode('task');
+$('addXor').onclick = () => addNode('xor');
+$('addAnd').onclick = () => addNode('and');
+$('addOr').onclick = () => addNode('or');
+$('addEnd').onclick = () => addNode('end');
+$('addLink').onclick = () => addNode('link');
+$('btnUndo').onclick = undo; $('btnRedo').onclick = redo; $('btnLayout').onclick = tidy;
+function togglePresent() { if (editing) endEdit(true); document.body.classList.toggle('present'); $('btnPresent').textContent = document.body.classList.contains('present') ? 'Exit presentation' : 'Present'; setTimeout(fit, 30); }
+$('btnPresent').onclick = togglePresent;
+$('btnHelp').onclick = () => $('dlgHelp').showModal(); $('hClose').onclick = () => $('dlgHelp').close();
+$('initials').addEventListener('input', () => { try { localStorage.setItem('fai-mapper-initials', $('initials').value); } catch (e) {} });
+
+function refreshSelect() {
+  const s = $('mapSelect'); const list = maps.filter(m => !m.parent).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  const cur = rootOf(map);
+  const all = cur.example && !list.some(m => m.id === cur.id) ? [cur, ...list] : list;
+  s.innerHTML = all.map(m => `<option value="${m.id}" ${m.id === cur.id ? 'selected' : ''}>${esc((m.engagement ? m.engagement + ' · ' : '') + (m.process_id ? m.process_id + ' ' : '') + m.process_name + (m.session ? ' (' + m.session + ')' : ''))}</option>`).join('');
+}
+$('mapSelect').onchange = e => { const m = maps.find(m => m.id === e.target.value); if (m) { navStack = []; openMap(m); } };
+function openMap(m, keepNav) { if (!keepNav) navStack = []; map = m; sel = null; undoStack = []; redoStack = []; refreshSelect(); fit(); $('saveState').textContent = m.example ? 'Example map (not saved)' : 'Saved'; }
+
+// new map
+$('btnNew').onclick = () => { $('nEng').value = map && !map.example ? map.engagement : ''; $('nSession').value = ''; $('nPid').value = ''; $('nName').value = ''; $('dlgNew').showModal(); setTimeout(() => $('nEng').focus(), 0); };
+$('nCancel').onclick = () => $('dlgNew').close();
+$('nCreate').onclick = async () => {
+  const lanes = $('nLanes').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const m = blankMap({ engagement: $('nEng').value.trim(), session: $('nSession').value.trim(), process_id: $('nPid').value.trim(), module: $('nModule').value, process_name: $('nName').value.trim() || 'Untitled process', lanes: lanes.length ? lanes : ['Process owner'] });
+  m.nodes.push(blankNode({ id: 'n1', type: 'start', label: 'Start', lane: m.lanes[0].id, x: X0 }));
+  $('dlgNew').close(); maps.push(m); openMap(m); sel = { kind: 'node', id: 'n1' }; await persist(); render();
+  toast('Map created. Press Enter to add the first step.');
+};
+
+// confirm
+function confirmBox(title, text, yes) { $('cfTitle').textContent = title; $('cfText').textContent = text; const d = $('dlgConfirm'); d.showModal(); $('cfNo').onclick = () => d.close(); $('cfYes').onclick = async () => { d.close(); await yes(); }; }
+
+// ---------- export ----------
+function bundle(list, scope) {
+  const roots = list.filter(m => !m.parent || !list.some(x => x.id === m.parent.map_id));
+  return JSON.stringify({ schema: BUNDLE, exported: now(), scope, engagement: map.engagement, root_ids: roots.map(m => m.id),
+    derived: Object.fromEntries(roots.map(r => [r.id, { steps_in_order: orderedSteps(r).map(s => s.text), stats: mapStats(r) }])),
+    maps: list.map(m => JSON.parse(JSON.stringify(m))) }, null, 2);
+}
+function exportJson() { const r = map; return bundle([r, ...descendants(r)], 'map and sub-processes'); }
+function exportAll() { const eng = rootOf(map).engagement; const list = maps.filter(m => (m.engagement || '') === (eng || '') && !m.example); if (!list.length) list.push(map, ...descendants(map)); return bundle(list, 'engagement ' + (eng || '(none)')); }
+function orderedSteps(m, prefix, depth) {
+  m = m || map; prefix = prefix || ''; depth = depth || 0;
+  const N = id => m.nodes.find(n => n.id === id);
+  const seen = new Set(), order = [];
+  const starts = m.nodes.filter(n => n.type === 'start').sort((a, b) => a.x - b.x);
+  const q = starts.length ? starts.map(n => n.id) : m.nodes.slice().sort((a, b) => a.x - b.x).slice(0, 1).map(n => n.id);
+  const indeg = {}; m.nodes.forEach(n => indeg[n.id] = 0); m.edges.forEach(e => { const a = N(e.from), b = N(e.to); if (a && b && b.x > a.x) indeg[e.to]++; });
+  const ready = q.slice();
+  while (ready.length) {
+    ready.sort((a, b) => N(a).x - N(b).x);
+    const id = ready.shift(); if (seen.has(id)) continue; seen.add(id); order.push(id);
+    m.edges.filter(e => e.from === id).forEach(e => { const a = N(e.from), b = N(e.to); if (!b) return; if (b.x > a.x) indeg[e.to]--; if (indeg[e.to] <= 0 && !seen.has(e.to)) ready.push(e.to); });
+  }
+  m.nodes.slice().sort((a, b) => a.x - b.x).forEach(n => { if (!seen.has(n.id)) order.push(n.id); });
+  let k = 0; const out = [];
+  order.map(N).filter(n => n.type !== 'start' && n.type !== 'end').forEach(n => {
+    const lane = (m.lanes.find(l => l.id === n.lane) || {}).name || ''; k++;
+    const num = prefix + k + '.'; const pad = '   '.repeat(depth);
+    const outs = m.edges.filter(e => e.from === n.id).map(e => { const t = N(e.to); return (e.label ? e.label + ' → ' : '→ ') + (t ? t.label || t.type : ''); });
+    const sys = n.system ? ', ' + n.system : '';
+    if (n.type === 'task') {
+      out.push({ id: n.id, text: `${pad}${num} ${n.label} (${lane}${sys}${n.minutes !== '' && n.minutes != null ? ', ' + n.minutes + ' min' : ''})${n.flags && n.flags.manual ? ' [manual]' : ''}${n.flags && n.flags.control ? ' [control]' : ''}${n.subprocess ? ' [sub-process]' : ''}` });
+      const child = n.subprocess && byId(n.subprocess);
+      if (child && depth < 5) out.push(...orderedSteps(child, num.replace(/\.$/, '') + '.', depth + 1));
+    } else if (n.type === 'link') {
+      const t = n.link && byId(n.link.map_id); out.push({ id: n.id, text: `${pad}${num} Continues in linked process: ${t ? mapLabel(t) : n.label || '(not chosen)'} (${lane}${sys})` });
+    } else out.push({ id: n.id, text: `${pad}${num} ${({ xor: 'Decision', and: 'All of', or: 'One or more of' })[n.type]}: ${n.label || ''} (${lane}${sys}) ${outs.join('; ')}` });
+  });
+  return out;
+}
+function mermaid(m) {
+  m = m || map;
+  const safe = s => String(s || '').replace(/"/g, "'").replace(/[\[\]{}()<>|]/g, ' ').trim() || ' ';
+  const L = [`%% ${safe(mapLabel(m))}${m.parent ? ' (sub-process)' : ''}`, 'flowchart LR'];
+  m.lanes.forEach(l => {
+    L.push(`  subgraph ${l.id.replace(/-/g, '_')}["${safe(l.name)}"]`, '    direction LR');
+    m.nodes.filter(n => n.lane === l.id).forEach(n => {
+      const lab = safe(n.label) + (n.system ? '<br/><small>' + safe(n.system) + '</small>' : '');
+      const tgt = n.link && byId(n.link.map_id);
+      const shape = { link: `>"→ ${safe(tgt ? mapLabel(tgt) : n.label)}"]`, task: n.subprocess ? `[["${lab} ⊞"]]` : `["${lab}"]`, start: `(["${safe(n.label) || 'Start'}"])`, end: `(["${safe(n.label) || 'End'}"])`, xor: `{"X ${safe(n.label)}"}`, and: `{{"AND ${safe(n.label)}"}}`, or: `{{"OR ${safe(n.label)}"}}` }[n.type];
+      L.push(`    ${n.id}${shape}`);
+    });
+    L.push('  end');
+  });
+  m.edges.forEach(e => L.push(`  ${e.from} -->${e.label ? '|' + safe(e.label) + '|' : ''} ${e.to}`));
+  L.push('  classDef manual fill:#fbf0dd,stroke:#b26b00', '  classDef control fill:#e3edf9,stroke:#2a63a8', '  classDef pain stroke:#c0392b,stroke-width:3px');
+  ['manual', 'control', 'pain'].forEach(c => { const ids = m.nodes.filter(n => n.flags && n.flags[c]).map(n => n.id); if (ids.length) L.push(`  class ${ids.join(',')} ${c}`); });
+  return L.join('\n');
+}
+function svgString() {
+  const prevSel = sel, prevView = Object.assign({}, view), wasPresent = document.body.classList.contains('present');
+  sel = null; document.body.classList.add('present'); view = { x: 20, y: 40, k: 1 }; render();
+  const W = contentWidth() + 40, H = totalHeight() + 80;
+  const clone = svg.cloneNode(true); clone.setAttribute('xmlns', NS); clone.setAttribute('width', W); clone.setAttribute('height', H); clone.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  clone.setAttribute('font-family', 'IBM Plex Sans, Segoe UI, Arial, sans-serif');
+  const bg = document.createElementNS(NS, 'rect'); bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', '#ffffff'); clone.insertBefore(bg, clone.firstChild);
+  if (!wasPresent) document.body.classList.remove('present'); sel = prevSel; view = prevView; render();
+  return { s: new XMLSerializer().serializeToString(clone), W, H };
+}
+function fileBase() { return [map.engagement, map.process_id, map.session, 'process-map'].filter(Boolean).join('_').replace(/[^A-Za-z0-9_-]+/g, '-'); }
+$('btnExport').onclick = () => { $('exOut').hidden = true; $('exCopyOut').hidden = true; $('dlgExport').showModal(); };
+$('exClose').onclick = () => $('dlgExport').close();
+$('exJson').onclick = () => saveFile(fileBase() + '.json', exportJson(), 'application/json');
+$('exAll').onclick = () => saveFile(((rootOf(map).engagement || 'engagement') + '_all-process-maps').replace(/[^A-Za-z0-9_-]+/g, '-') + '.json', exportAll(), 'application/json');
+$('exJsonCopy').onclick = () => copyText(exportJson());
+$('exSvg').onclick = () => saveFile(fileBase() + '.svg', svgString().s, 'image/svg+xml');
+$('exPng').onclick = () => {
+  const { s, W, H } = svgString(); const img = new Image(); const scale = 2;
+  img.onload = () => { const c = document.createElement('canvas'); c.width = W * scale; c.height = H * scale; const x = c.getContext('2d'); x.scale(scale, scale); x.drawImage(img, 0, 0); c.toBlob(b => { if (!b) return toast('Image export failed. Use SVG.'); if (downloads) { const r = new FileReader(); r.onload = () => saveFile(fileBase() + '.png', new Uint8Array(r.result), 'image/png'); r.readAsArrayBuffer(b); } else saveFile(fileBase() + '.png', b, 'image/png'); }, 'image/png'); };
+  img.onerror = () => toast('Image export failed. Use SVG.');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+};
+function showOut(t) { const o = $('exOut'); o.hidden = false; o.textContent = t; $('exCopyOut').hidden = false; $('exCopyOut').onclick = () => copyText(t); }
+$('exMermaid').onclick = () => showOut([map, ...descendants(map)].map(x => mermaid(x)).join('\n\n'));
+$('exSteps').onclick = () => showOut(orderedSteps().map(s => s.text).join('\n'));
+
+// ---------- import ----------
+$('btnImport').onclick = () => { $('imText').value = ''; $('imFile').value = ''; $('dlgImport').showModal(); };
+$('imCancel').onclick = () => $('dlgImport').close();
+$('imGo').onclick = async () => {
+  let text = $('imText').value.trim(); const f = $('imFile').files[0];
+  if (!text && f) text = await f.text();
+  try {
+    const data = JSON.parse(text);
+    const list = Array.isArray(data.maps) ? data.maps : [data];
+    if (!list.length || list.some(m => !m.nodes || !m.lanes || !m.edges)) throw new Error('missing nodes, lanes or edges');
+    const isUpd = data.update === true; const replaced = new Set();
+    if (isUpd) list.forEach(m => { if (maps.some(x => x.id === m.id)) replaced.add(m.id); });
+    const remap = {}; list.forEach(m => { if (!replaced.has(m.id) && maps.some(x => x.id === m.id)) remap[m.id] = uid('map-'); });
+    list.forEach(m => {
+      if (remap[m.id]) m.id = remap[m.id];
+      if (m.parent && remap[m.parent.map_id]) m.parent.map_id = remap[m.parent.map_id];
+      m.nodes = m.nodes.map(n => { n = blankNode(n); if (n.subprocess && remap[n.subprocess]) n.subprocess = remap[n.subprocess]; if (n.link && remap[n.link.map_id]) n.link.map_id = remap[n.link.map_id]; return n; });
+      m.schema = SCHEMA; delete m.derived; delete m.exported; m.example = false; m.parent = m.parent || null;
+    });
+    $('dlgImport').close();
+    list.forEach(m => { const i = maps.findIndex(x => x.id === m.id); if (i >= 0) maps[i] = m; else maps.push(m); });
+    for (const m of list) await store.save(m);
+    const top = list.find(m => !m.parent || !list.some(x => x.id === m.parent.map_id)) || list[0];
+    if (replaced.size && map && replaced.has(map.id)) { snapshot(); const keepUndo = undoStack; map = top; undoStack = keepUndo; redoStack = []; sel = null; refreshSelect(); render(); fit(); }
+    else openMap(top, false);
+    toast(replaced.size ? `Updated ${replaced.size} map${replaced.size > 1 ? 's' : ''} in place` + (top.updated_by_claude && top.updated_by_claude.changes ? ` (${top.updated_by_claude.changes.length} changes; see the comment on Start)` : '') : list.length > 1 ? `Imported ${list.length} maps` : 'Map imported');
+  } catch (e) { toast('That is not a map exported from this tool (' + e.message + ').'); }
+};
+
+// ---------- misc ----------
+let toastT = null;
+function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(() => el.style.display = 'none', 3200); }
+window.addEventListener('resize', () => render());
+
+window.__mapper = { get map() { return map; }, get maps() { return maps; } }; // read-only hook for automated tests
+// ---------- boot ----------
+(async function boot() {
+  try { $('initials').value = localStorage.getItem('fai-mapper-initials') || ''; } catch (e) {}
+  map = exampleMap(); maps = []; refreshSelect(); fit();
+  initDownloads(); initSample();
+  await store.init();
+  try { maps = (await store.list()).filter(m => m && m.nodes); } catch (e) { maps = []; }
+  maps.forEach(m => { m.nodes = m.nodes.map(n => blankNode(n)); m.parent = m.parent || null; });
+  const tops = maps.filter(m => !m.parent).sort((a, b) => (b.updated || '').localeCompare(a.updated || ''));
+  if (tops.length) openMap(tops[0]);
+  else refreshSelect();
+})();
+})();
+</script>
+</body>
+</html>

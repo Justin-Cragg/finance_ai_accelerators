@@ -1,0 +1,1631 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Finance AI engagement data model (F0)",
+  "version": "1.0",
+  "type": "object",
+  "properties": {
+    "engagement": {
+      "type": "object",
+      "title": "Engagement",
+      "x-report-section": "1, 2",
+      "properties": {
+        "client": {
+          "type": "string",
+          "title": "Client",
+          "description": "Client legal or trading name",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "CORE-01"
+          ]
+        },
+        "industry": {
+          "type": "string",
+          "title": "Industry",
+          "description": "Client industry, in the client's words",
+          "x-source": "Intake",
+          "x-required-for": "Optional",
+          "x-questions": []
+        },
+        "sponsor_role": {
+          "type": "string",
+          "title": "Sponsor role",
+          "description": "Role of the engagement sponsor (e.g. CFO)",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": []
+        },
+        "objectives": {
+          "type": "string",
+          "title": "Objectives",
+          "description": "What the client wants from AI and automation, in their words",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "KO-01",
+            "KO-02",
+            "CORE-03",
+            "CFF-01"
+          ]
+        },
+        "success_measures": {
+          "type": "string",
+          "title": "Success measures",
+          "description": "How the sponsor will judge success",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "KO-03",
+            "CORE-04"
+          ]
+        },
+        "processes_in_scope": {
+          "type": "array",
+          "title": "Processes in scope",
+          "description": "Process modules selected at kick-off",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "KO-04"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "out_of_scope": {
+          "type": "array",
+          "title": "Out of scope",
+          "description": "Areas explicitly excluded",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "KO-05"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraints": {
+          "type": "string",
+          "title": "Constraints",
+          "description": "Stated limits, e.g. no new infrastructure, licence budget, IT capacity",
+          "x-source": "Intake",
+          "x-required-for": "Report and build",
+          "x-questions": [
+            "KO-07",
+            "KO-08",
+            "CORE-05",
+            "CORE-16",
+            "SOL-03"
+          ]
+        },
+        "workshop_dates": {
+          "type": "array",
+          "title": "Workshop dates",
+          "description": "Date of each workshop session",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "KO-15"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "planned_system_changes": {
+          "type": "string",
+          "title": "Planned system changes",
+          "description": "System changes planned in the next 12 months (e.g. ERP upgrade, new expense tool) that could affect a design",
+          "x-source": "Intake",
+          "x-required-for": "Report and build",
+          "x-questions": [
+            "KO-06"
+          ]
+        },
+        "recording_consent": {
+          "type": "string",
+          "title": "Recording consent",
+          "description": "Consent to record sessions in Teams and parse transcripts with an approved tool (D3)",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [
+            "KO-13"
+          ],
+          "enum": [
+            "Yes - all sessions",
+            "Yes - some sessions",
+            "No",
+            "Not yet asked"
+          ]
+        },
+        "audit_client": {
+          "type": "string",
+          "title": "Deloitte audit client or related entity",
+          "description": "Drives independence clearance before issue",
+          "x-source": "Intake",
+          "x-required-for": "Report",
+          "x-questions": [],
+          "enum": [
+            "Yes",
+            "No",
+            "To confirm"
+          ]
+        }
+      }
+    },
+    "attendee": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Attendees",
+        "x-report-section": "2, Appendix A",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "AT-01 onward",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Attendee name",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "role": {
+            "type": "string",
+            "title": "Role",
+            "description": "Job title or role",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": [
+              "KO-10",
+              "CORE-02"
+            ]
+          },
+          "sessions": {
+            "type": "array",
+            "title": "Sessions attended",
+            "description": "Workshop sessions attended",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          },
+          "decision_rights": {
+            "type": "string",
+            "title": "Decision rights",
+            "description": "What this person can approve (e.g. process change, spend, system access)",
+            "x-source": "Workshop",
+            "x-required-for": "Optional",
+            "x-questions": []
+          },
+          "can_share_screen": {
+            "type": "string",
+            "title": "Can share screen with live logins",
+            "description": "Whether the attendee can show live systems in the session",
+            "x-source": "Intake",
+            "x-required-for": "Optional",
+            "x-questions": [
+              "KO-11"
+            ],
+            "enum": [
+              "Yes",
+              "No",
+              "To arrange"
+            ]
+          }
+        },
+        "x-id-prefix": "AT"
+      }
+    },
+    "system": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Systems",
+        "x-report-section": "3, 8",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "SY-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "name": {
+            "type": "string",
+            "title": "System",
+            "description": "Product name (e.g. NetSuite, Expensify)",
+            "x-source": "Intake",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "CORE-07",
+              "CORE-12",
+              "CFF-03",
+              "GEN-04"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "System category",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "ERP / GL",
+              "Expense management",
+              "Banking",
+              "Payments",
+              "Close management",
+              "Reporting / BI",
+              "Forecasting / FP&A",
+              "Spreadsheet",
+              "Productivity / M365",
+              "AI tool",
+              "Integration platform",
+              "Other"
+            ]
+          },
+          "used_for": {
+            "type": "string",
+            "title": "Used for",
+            "description": "Processes and tasks it supports",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "edition_modules": {
+            "type": "string",
+            "title": "Edition and modules licensed",
+            "description": "Edition, plan or tier, plus add-on modules held",
+            "x-source": "Intake",
+            "x-required-for": "Build",
+            "x-questions": [
+              "CORE-08",
+              "CORE-11",
+              "EXP-03",
+              "BNK-03"
+            ]
+          },
+          "unused_features": {
+            "type": "string",
+            "title": "Licensed but unused features",
+            "description": "Features the client pays for but has not switched on",
+            "x-source": "Workshop",
+            "x-required-for": "Build",
+            "x-questions": [
+              "SOL-01"
+            ]
+          },
+          "business_owner": {
+            "type": "string",
+            "title": "Business owner (role)",
+            "description": "Role accountable for the system",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "admin": {
+            "type": "string",
+            "title": "Administered by",
+            "description": "Who changes configuration",
+            "x-source": "Intake",
+            "x-required-for": "Build",
+            "x-questions": [
+              "CORE-09",
+              "SOL-02"
+            ],
+            "enum": [
+              "In-house",
+              "Implementation partner",
+              "Vendor",
+              "Mixed",
+              "Unknown"
+            ]
+          },
+          "admin_contact_role": {
+            "type": "string",
+            "title": "Admin contact (role)",
+            "description": "Role or firm that grants access and makes changes",
+            "x-source": "Intake",
+            "x-required-for": "Build",
+            "x-questions": [
+              "KO-12"
+            ]
+          },
+          "users": {
+            "type": "number",
+            "title": "Number of users",
+            "description": "Named users",
+            "x-source": "Intake",
+            "x-required-for": "Optional",
+            "x-questions": []
+          },
+          "api_access": {
+            "type": "string",
+            "title": "API / integration access",
+            "description": "How data can be read or written programmatically",
+            "x-source": "Intake",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "CORE-10"
+            ],
+            "enum": [
+              "REST / SOAP API available",
+              "Native connector only",
+              "File import/export only",
+              "None",
+              "Unknown"
+            ]
+          },
+          "sandbox": {
+            "type": "string",
+            "title": "Sandbox available",
+            "description": "Non-production environment for testing",
+            "x-source": "Intake",
+            "x-required-for": "Build",
+            "x-questions": [],
+            "enum": [
+              "Yes",
+              "No",
+              "Can be requested",
+              "Unknown"
+            ]
+          },
+          "key_person_risk": {
+            "type": "string",
+            "title": "Key-person risk",
+            "description": "Only one person understands or maintains it",
+            "x-source": "Workshop",
+            "x-required-for": "Optional",
+            "x-questions": [],
+            "enum": [
+              "Yes",
+              "No"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "description": "Anything else relevant",
+            "x-source": "Workshop",
+            "x-required-for": "Optional",
+            "x-questions": []
+          }
+        },
+        "x-id-prefix": "SY"
+      }
+    },
+    "data_flow": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Data flows",
+        "x-report-section": "3",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "DF-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "from_system": {
+            "type": "string",
+            "title": "From",
+            "description": "Source system ID",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [],
+            "x-ref": "system"
+          },
+          "to_system": {
+            "type": "string",
+            "title": "To",
+            "description": "Target system ID",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [],
+            "x-ref": "system"
+          },
+          "data": {
+            "type": "string",
+            "title": "Data",
+            "description": "What moves (e.g. card transactions, statement lines)",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "How it moves today",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "EXP-04",
+              "EXP-05",
+              "BNK-02",
+              "CFF-05",
+              "GEN-05"
+            ],
+            "enum": [
+              "Automated integration",
+              "Native connector",
+              "File upload",
+              "Manual re-key",
+              "Email / copy-paste"
+            ]
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "description": "How often",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Real time",
+              "Daily",
+              "Weekly",
+              "Monthly",
+              "Ad hoc"
+            ]
+          },
+          "issues": {
+            "type": "string",
+            "title": "Issues",
+            "description": "Failures, delays, errors",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          }
+        },
+        "x-id-prefix": "DF"
+      }
+    },
+    "process": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Processes",
+        "x-report-section": "4, Appendix B",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "P-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Process",
+            "description": "Process name",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "module": {
+            "type": "string",
+            "title": "Module",
+            "description": "Question-bank module the process maps to (GEN for any process without its own module)",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "EXP",
+              "BNK",
+              "CFF",
+              "GEN"
+            ]
+          },
+          "owner_role": {
+            "type": "string",
+            "title": "Owner (role)",
+            "description": "Role accountable for the process",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "participants": {
+            "type": "string",
+            "title": "Participants (roles)",
+            "description": "Roles that perform or review steps",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "trigger_start": {
+            "type": "string",
+            "title": "Start trigger",
+            "description": "What starts the process",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "GEN-06"
+            ]
+          },
+          "trigger_end": {
+            "type": "string",
+            "title": "End trigger",
+            "description": "What marks it complete",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "description": "How often it runs",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [
+              "CFF-02"
+            ],
+            "enum": [
+              "Daily",
+              "Weekly",
+              "Fortnightly",
+              "Monthly",
+              "Quarterly",
+              "Ongoing"
+            ]
+          },
+          "timing": {
+            "type": "string",
+            "title": "Timing",
+            "description": "Deadlines and calendar, e.g. WD+2 at month end",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [
+              "EXP-14",
+              "BNK-10",
+              "GEN-03"
+            ]
+          },
+          "volume": {
+            "type": "number",
+            "title": "Volume per month",
+            "description": "Transactions or items per month (state the unit)",
+            "x-source": "Intake",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "EXP-01",
+              "BNK-01",
+              "GEN-01"
+            ]
+          },
+          "volume_unit": {
+            "type": "string",
+            "title": "Volume unit",
+            "description": "What is counted (claims, statement lines, forecast refreshes)",
+            "x-source": "Intake",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "seasonality": {
+            "type": "string",
+            "title": "Seasonality",
+            "description": "Peaks and troughs in volume",
+            "x-source": "Workshop",
+            "x-required-for": "Build",
+            "x-questions": [
+              "EXP-02",
+              "GEN-02"
+            ]
+          },
+          "hours_per_cycle": {
+            "type": "number",
+            "title": "Hours per cycle",
+            "description": "Total people-hours per cycle",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [
+              "EXP-12",
+              "CFF-08",
+              "GEN-11"
+            ]
+          },
+          "cycles_per_year": {
+            "type": "number",
+            "title": "Cycles per year",
+            "description": "Number of cycles in a year",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "manual_share": {
+            "type": "number",
+            "title": "Manual share (%)",
+            "description": "Share of effort that is manual",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "systems": {
+            "type": "array",
+            "title": "Systems and files",
+            "description": "System IDs and key spreadsheets used",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          },
+          "linked_processes": {
+            "type": "string",
+            "title": "Linked processes",
+            "description": "Upstream and downstream processes linked in the process map (\u2192 continues in, \u2190 comes from)",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "inputs": {
+            "type": "string",
+            "title": "Inputs",
+            "description": "What comes in",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "CFF-04"
+            ]
+          },
+          "outputs": {
+            "type": "string",
+            "title": "Outputs",
+            "description": "What goes out",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "CFF-10",
+              "CFF-11"
+            ]
+          },
+          "steps": {
+            "type": "string",
+            "title": "Key steps",
+            "description": "Numbered steps, max 10 (full map in Appendix B)",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "EXP-11",
+              "BNK-05",
+              "CFF-07",
+              "GEN-07"
+            ]
+          },
+          "manual_touchpoints": {
+            "type": "string",
+            "title": "Manual touchpoints",
+            "description": "Re-keying, copy-paste, lookups, chasing",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [
+              "BNK-08",
+              "GEN-12"
+            ]
+          },
+          "business_rules": {
+            "type": "string",
+            "title": "Business rules",
+            "description": "Coding, matching, approval or policy rules applied",
+            "x-source": "Workshop",
+            "x-required-for": "Build",
+            "x-questions": [
+              "EXP-06",
+              "EXP-08",
+              "BNK-06",
+              "CFF-06",
+              "GEN-08"
+            ]
+          },
+          "controls": {
+            "type": "string",
+            "title": "Key controls",
+            "description": "Reviews, approvals, segregation of duties",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "EXP-07",
+              "EXP-13",
+              "BNK-09",
+              "GEN-09"
+            ]
+          },
+          "exceptions": {
+            "type": "string",
+            "title": "Exceptions and rework",
+            "description": "What goes wrong, how often, how it is fixed",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "EXP-10",
+              "EXP-15",
+              "BNK-07",
+              "CFF-09",
+              "GEN-10"
+            ]
+          },
+          "maturity": {
+            "type": "integer",
+            "title": "Maturity (1-5)",
+            "description": "1 ad hoc and manual, 3 documented and partly automated, 5 automated with exception-only review",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "maturity_rationale": {
+            "type": "string",
+            "title": "Maturity rationale",
+            "description": "One line",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          }
+        },
+        "x-id-prefix": "P"
+      }
+    },
+    "pain_point": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Pain points",
+        "x-report-section": "5",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "PP-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "process_id": {
+            "type": "string",
+            "title": "Process",
+            "description": "Process ID",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "x-ref": "process"
+          },
+          "description": {
+            "type": "string",
+            "title": "Pain point",
+            "description": "What goes wrong, in plain words",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [
+              "CORE-18"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Pain point category",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Manual effort",
+              "Data quality",
+              "Timeliness",
+              "Control gap",
+              "Visibility / reporting",
+              "Key-person dependency",
+              "System limitation"
+            ]
+          },
+          "root_cause": {
+            "type": "string",
+            "title": "Root cause",
+            "description": "Why it happens",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "impact": {
+            "type": "string",
+            "title": "Impact",
+            "description": "Hours, errors or risk, quantified where possible",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "impact_hours_per_year": {
+            "type": "number",
+            "title": "Impact (hours / year)",
+            "description": "Quantified effort where available",
+            "x-source": "Analysis",
+            "x-required-for": "Optional",
+            "x-questions": []
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency",
+            "description": "How often it happens",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "raised_by_role": {
+            "type": "string",
+            "title": "Raised by (role)",
+            "description": "Role of the person who raised it",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "evidence_ids": {
+            "type": "array",
+            "title": "Evidence",
+            "description": "Evidence IDs",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          },
+          "use_case_ids": {
+            "type": "array",
+            "title": "Linked use cases",
+            "description": "Use case IDs",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "x-id-prefix": "PP"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Evidence",
+        "x-report-section": "5, traceability",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "EV-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source type",
+            "description": "Where it came from",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Intake answer",
+              "Document",
+              "Transcript",
+              "Scribe note",
+              "Process map",
+              "Whiteboard photo",
+              "Sample data"
+            ]
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference",
+            "description": "Question ID, document name, or session code + timestamp (e.g. W2 00:14:32)",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary or short quote",
+            "description": "What the source says (keep quotes short)",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "supports": {
+            "type": "array",
+            "title": "Supports",
+            "description": "IDs of records this evidence supports",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "x-id-prefix": "EV"
+      }
+    },
+    "use_case": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Use cases",
+        "x-report-section": "6, 9",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "UC-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Use case",
+            "description": "Short name",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "library_id": {
+            "type": "string",
+            "title": "Library pattern",
+            "description": "C1 library entry it is based on",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "x-ref": "library"
+          },
+          "process_id": {
+            "type": "string",
+            "title": "Process",
+            "description": "Process ID",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "x-ref": "process"
+          },
+          "pain_point_ids": {
+            "type": "array",
+            "title": "Pain points addressed",
+            "description": "PP IDs",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          },
+          "solution_pattern": {
+            "type": "string",
+            "title": "Solution pattern",
+            "description": "From the Deloitte Finance AI use case library",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Document extraction",
+              "Matching and reconciliation",
+              "Anomaly and variance detection",
+              "Commentary and narrative generation",
+              "Agentic transaction posting",
+              "Finance Q&A assistant",
+              "Forecasting",
+              "Workflow and configuration"
+            ]
+          },
+          "delivery_tier": {
+            "type": "string",
+            "title": "Delivery tier",
+            "description": "Configure-first tiering",
+            "x-source": "Analysis",
+            "x-required-for": "Report and build",
+            "x-questions": [],
+            "enum": [
+              "T1 Configure existing tool",
+              "T2 Low-code AI in client tools",
+              "T3 Custom build"
+            ]
+          },
+          "tools": {
+            "type": "string",
+            "title": "Tools",
+            "description": "Tools the solution uses",
+            "x-source": "Analysis",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "problem_statement": {
+            "type": "string",
+            "title": "Problem statement",
+            "description": "Who, what, cost today, in one sentence",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "how_it_works": {
+            "type": "string",
+            "title": "How it works",
+            "description": "3-5 steps of the future process",
+            "x-source": "Analysis",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "human_in_loop": {
+            "type": "string",
+            "title": "Human in the loop",
+            "description": "What a person reviews or approves, and when",
+            "x-source": "Analysis",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "SOL-05"
+            ]
+          },
+          "controls_audit": {
+            "type": "string",
+            "title": "Controls and audit trail",
+            "description": "How every AI action is logged and evidenced",
+            "x-source": "Analysis",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "runstate_owner_role": {
+            "type": "string",
+            "title": "Run-state owner (role)",
+            "description": "Role accountable once live",
+            "x-source": "Workshop",
+            "x-required-for": "Report and build",
+            "x-questions": [
+              "KO-09",
+              "CORE-17",
+              "SOL-04"
+            ]
+          },
+          "volume": {
+            "type": "number",
+            "title": "Volume / year",
+            "description": "Items per year (from process volume)",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "minutes_per_item": {
+            "type": "number",
+            "title": "Minutes per item today",
+            "description": "Manual minutes per item",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "automation_share": {
+            "type": "number",
+            "title": "Automation share (%)",
+            "description": "Share of items handled without manual work",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "hours_saved": {
+            "type": "number",
+            "title": "Est. hours saved / yr",
+            "description": "volume x minutes per item x automation share / 60",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "indicative_effort_weeks": {
+            "type": "number",
+            "title": "Indicative effort (weeks)",
+            "description": "Build effort",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "phase": {
+            "type": "string",
+            "title": "Recommended phase",
+            "description": "Roadmap phase",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Quick win",
+              "Phase 2",
+              "Backlog"
+            ]
+          },
+          "risks": {
+            "type": "string",
+            "title": "Risks and dependencies",
+            "description": "Main risks",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          }
+        },
+        "x-id-prefix": "UC"
+      }
+    },
+    "score": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Scoring",
+        "x-report-section": "7, Appendix C",
+        "properties": {
+          "use_case_id": {
+            "type": "string",
+            "title": "Use case",
+            "description": "UC ID",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "x-ref": "use_case"
+          },
+          "v_effort": {
+            "type": "integer",
+            "title": "Value: effort released (1-5)",
+            "description": "1 < 50 h/yr, 5 > 1,000 h/yr",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "v_quality": {
+            "type": "integer",
+            "title": "Value: accuracy and quality (1-5)",
+            "description": "1 no change, 5 removes a recurring error",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "v_control": {
+            "type": "integer",
+            "title": "Value: control and risk (1-5)",
+            "description": "1 no change, 5 closes a known control gap",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "f_data": {
+            "type": "integer",
+            "title": "Feasibility: data (1-5)",
+            "description": "1 missing or poor, 5 clean, structured, accessible",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "f_access": {
+            "type": "integer",
+            "title": "Feasibility: system access (1-5)",
+            "description": "1 no API, manual only, 5 API in place",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "f_stability": {
+            "type": "integer",
+            "title": "Feasibility: process stability (1-5)",
+            "description": "1 changing or undocumented, 5 stable and standard",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "f_change": {
+            "type": "integer",
+            "title": "Feasibility: change impact (1-5)",
+            "description": "1 major role change, 5 minor change",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale",
+            "description": "Why these scores",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          }
+        }
+      }
+    },
+    "readiness": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Readiness",
+        "x-report-section": "8",
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "title": "Dimension",
+            "description": "Readiness dimension",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Data quality",
+              "Data access and APIs",
+              "Systems and integration",
+              "Security and privacy",
+              "Governance and controls",
+              "People and skills",
+              "Change readiness"
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "title": "Rating (1-5)",
+            "description": "1 blocker, 3 workable with mitigation, 5 ready",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "evidence": {
+            "type": "string",
+            "title": "Evidence",
+            "description": "What we saw",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [
+              "KO-14",
+              "CORE-13",
+              "CORE-14",
+              "CORE-15"
+            ]
+          },
+          "gap": {
+            "type": "string",
+            "title": "Gap",
+            "description": "What is missing",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "action": {
+            "type": "string",
+            "title": "Action before build",
+            "description": "Only actions that gate a priority use case",
+            "x-source": "Analysis",
+            "x-required-for": "Report and build",
+            "x-questions": []
+          },
+          "gates_use_cases": {
+            "type": "array",
+            "title": "Gates use cases",
+            "description": "UC IDs gated",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "build_requirement": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Build requirements",
+        "x-report-section": "Appendix H (build specification), referenced from 9",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "BR-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Build",
+            "x-questions": []
+          },
+          "use_case_id": {
+            "type": "string",
+            "title": "Use case",
+            "description": "UC ID",
+            "x-source": "Analysis",
+            "x-required-for": "Build",
+            "x-questions": [],
+            "x-ref": "use_case"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Kind of requirement",
+            "x-source": "Analysis",
+            "x-required-for": "Build",
+            "x-questions": [],
+            "enum": [
+              "Access and roles",
+              "Configuration",
+              "Field / account mapping",
+              "Sample / test data",
+              "Acceptance criterion",
+              "Cut-over and rollback",
+              "Run-state support"
+            ]
+          },
+          "requirement": {
+            "type": "string",
+            "title": "Requirement",
+            "description": "What is needed, specifically",
+            "x-source": "Workshop",
+            "x-required-for": "Build",
+            "x-questions": [
+              "SOL-06",
+              "EXP-09",
+              "BNK-04",
+              "BNK-12",
+              "GEN-14"
+            ]
+          },
+          "system_id": {
+            "type": "string",
+            "title": "System",
+            "description": "System ID it applies to",
+            "x-source": "Workshop",
+            "x-required-for": "Build",
+            "x-questions": [],
+            "x-ref": "system"
+          },
+          "owner_role": {
+            "type": "string",
+            "title": "Provided by (role)",
+            "description": "Who provides or approves it",
+            "x-source": "Workshop",
+            "x-required-for": "Build",
+            "x-questions": []
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Readiness of this requirement",
+            "x-source": "Analysis",
+            "x-required-for": "Build",
+            "x-questions": [],
+            "enum": [
+              "Not started",
+              "Requested",
+              "Received",
+              "Confirmed",
+              "Blocked"
+            ]
+          }
+        },
+        "x-id-prefix": "BR"
+      }
+    },
+    "open_question": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Open questions",
+        "x-report-section": "Working list; all closed or listed in Appendix E before issue",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "OQ-01 onward",
+            "x-source": "Analysis",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "question": {
+            "type": "string",
+            "title": "Question",
+            "description": "The open question",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "field_ref": {
+            "type": "string",
+            "title": "Field it fills",
+            "description": "Entity.field the answer fills",
+            "x-source": "Analysis",
+            "x-required-for": "Optional",
+            "x-questions": []
+          },
+          "owner_role": {
+            "type": "string",
+            "title": "Owner (role)",
+            "description": "Who will answer",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "due": {
+            "type": "string",
+            "title": "Due",
+            "description": "Date the answer is due",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Status",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Open",
+              "Answered",
+              "Closed - not needed"
+            ]
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer",
+            "description": "The answer once received",
+            "x-source": "Workshop",
+            "x-required-for": "Report",
+            "x-questions": []
+          }
+        },
+        "x-id-prefix": "OQ"
+      }
+    },
+    "document": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "Documents received",
+        "x-report-section": "Appendix F",
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "ID",
+            "description": "DOC-01 onward",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request item",
+            "description": "A3 request list item it answers",
+            "x-source": "Intake",
+            "x-required-for": "Optional",
+            "x-questions": []
+          },
+          "name": {
+            "type": "string",
+            "title": "Document",
+            "description": "File name or description",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": [
+              "EXP-16",
+              "BNK-11",
+              "CFF-12",
+              "GEN-13"
+            ]
+          },
+          "received": {
+            "type": "string",
+            "title": "Received",
+            "description": "Date received",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "from_role": {
+            "type": "string",
+            "title": "From (role)",
+            "description": "Who sent it",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": []
+          },
+          "personal_data": {
+            "type": "string",
+            "title": "Contains personal data",
+            "description": "Drives handling under D3",
+            "x-source": "Intake",
+            "x-required-for": "Report",
+            "x-questions": [],
+            "enum": [
+              "Yes",
+              "No",
+              "Unknown"
+            ]
+          },
+          "location": {
+            "type": "string",
+            "title": "Stored at",
+            "description": "Where the file is held",
+            "x-source": "Intake",
+            "x-required-for": "Optional",
+            "x-questions": []
+          }
+        },
+        "x-id-prefix": "DOC"
+      }
+    }
+  },
+  "x-record-metadata": {
+    "evidence_ids": "List of EV IDs supporting the record",
+    "confidence": "High / Medium / Low, set by S2 when extracted from a transcript",
+    "record_status": "Draft (AI) / Reviewed / Confirmed with client"
+  }
+}
